@@ -1,6 +1,7 @@
 ﻿
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading;
@@ -53,9 +54,20 @@ namespace ChatworkJenkinsBot
             var spreadsheetService = SpreadsheetService.Instance;
             var chatworkService = ChatworkService.Instance;
 
-            await spreadsheetService.UpdateProjectSettings(cancelToken);
+            try
+            {
+                await spreadsheetService.UpdateProjectSettings(cancelToken);
 
-            await chatworkService.Fetch(cancelToken);
+                await chatworkService.Fetch(cancelToken);
+            }
+            catch (Exception e)
+            {
+                ConsoleUtility.Separator();
+
+                Console.WriteLine(e);
+                
+                ConsoleUtility.Separator();
+            }
         }
     }
 }

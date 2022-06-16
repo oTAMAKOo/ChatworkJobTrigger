@@ -153,6 +153,7 @@ namespace ChatworkJenkinsBot
 
             //----- 引数名:引数で順番無視で登録 -----
 
+            
             foreach (var argument in arguments)
             {
                 if (!argument.Contains(":")){ continue; }
@@ -175,13 +176,13 @@ namespace ChatworkJenkinsBot
             //----- 通常登録 -----
 
             // 登録済みの引数名除外.
+
             argNames = argNames.Where(x => !jobArgument.ContainsKey(x)).ToArray();
+            arguments = arguments.Where(x => !x.Contains(":")).ToArray();
 
             for (var i = 0; i < arguments.Length; i++)
             {
                 var argument = arguments[i];
-
-                if (argument.Contains(":")){ continue; }
 
                 var argumentName = argNames.ElementAtOrDefault(i);
 

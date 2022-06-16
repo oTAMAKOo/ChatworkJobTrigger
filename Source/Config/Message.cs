@@ -23,6 +23,10 @@ namespace ChatworkJenkinsBot
 
         public override string ConfigIniName { get { return "message.ini"; } }
 
+        public string JobSuccess { get { return GetData<string>(MessageSection, JobSuccessFieldName); } }
+        public string JobFailed { get { return GetData<string>(MessageSection, JobFailedFieldName); } }
+        public string JobCanceled { get { return GetData<string>(MessageSection, JobCanceledFieldName); } }
+
         public string RequestCommandError { get { return GetData<string>(ErrorSection, RequestCommandErrorFieldName); } }
 
         //----- method -----

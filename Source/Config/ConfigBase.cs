@@ -35,7 +35,7 @@ namespace ChatworkJenkinsBot
             {
                 CreateDefaultConfigFile(configFilePath);
 
-                throw new Exception($"Generated {ConfigIniName} file.\nPlease edit {ConfigIniName}.");
+                throw new Exception($"Generated {ConfigIniName} file.\nPlease edit {configFilePath}.");
             }
 
             var iniDataString = await File.ReadAllTextAsync(configFilePath);

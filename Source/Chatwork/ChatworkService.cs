@@ -11,12 +11,18 @@ namespace ChatworkJenkinsBot
     public sealed class ChatworkService : Singleton<ChatworkService>
     {
         //----- params -----
+
+        private const int FetchIntervalSeconds = 15;
+
+        private static readonly DateTime UNIX_EPOCH = new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc);
         
         //----- field -----
         
         private ChatworkClient client = null;
         
         private ChatworkClient.AccountData myAccount = null;
+
+        private DateTime fetchTime = default;
 
         private DateTime nextFetchTime = default;
 
@@ -38,7 +44,8 @@ namespace ChatworkJenkinsBot
 
             await GetMyAccountData(cancelToken);
 
-            nextFetchTime = DateTime.Now;
+            fetchTime = DateTime.Now;
+            nextFetchTime = fetchTime.AddSeconds(FetchIntervalSeconds);
         }
 
         public async Task GetMyAccountData(CancellationToken cancelToken)
@@ -54,22 +61,25 @@ namespace ChatworkJenkinsBot
 
             if (time < nextFetchTime){ return; }
 
-            var json = await client.GetMessage(cancelToken, true);
+            var json = await client.GetMessage(cancelToken);
 
             if (!string.IsNullOrEmpty(json))
             {
-                await ParseMessages(json, time.ToUnixTime(), cancelToken);
+                var unixTime = (long)fetchTime.ToUniversalTime().Subtract(UNIX_EPOCH).TotalSeconds;
+
+                await ParseMessages(json, unixTime, cancelToken);
             }
 
-            nextFetchTime = time.AddSeconds(30);
+            fetchTime = time;
+            nextFetchTime = time.AddSeconds(FetchIntervalSeconds);
         }
 
-        private async Task ParseMessages(string json, long updateTime, CancellationToken cancelToken)
+        private async Task ParseMessages(string json, long unixTime, CancellationToken cancelToken)
         {
-            var messages = JsonConvert.DeserializeObject<ChatworkClient.MessageData[]>(json);
+            var messageDatas = JsonConvert.DeserializeObject<ChatworkClient.MessageData[]>(json);
             
-            // TODO: 仮
-            messages = messages.ToArray(); //messages.Where(x => updateTime <= x.update_time).ToArray();
+            // 前回取得後以降に投稿・更新された対象.
+            var messages = messageDatas.Where(x =>　unixTime < x.send_time).ToArray();
 
             foreach (var message in messages)
             {
@@ -79,7 +89,7 @@ namespace ChatworkJenkinsBot
 
                     if (jobInfo != null)
                     {
-                        //RequestJenkinsJob(jobInfo.Item1, jobInfo.Item2).Forget();
+                        //RequestJenkinsJob(jobInfo.Item1, jobInfo.Item2, message, cancelToken).Forget();
                     }
                 }
                 catch (Exception e)
@@ -134,10 +144,8 @@ namespace ChatworkJenkinsBot
 
                 ConsoleUtility.Separator();
             }
-            catch (Exception e)
+            catch (Exception ex)
             {
-                Console.WriteLine(e);
-
                 // コマンドが間違っている通知.
 
                 var chatworkConfig = ChatworkConfig.Instance;
@@ -147,20 +155,46 @@ namespace ChatworkJenkinsBot
                               messageConfig.RequestCommandError;
                 //TODO:
                 //await client.SendMessage(message, cancelToken);
+
+                // ログ出力.
+
+                ConsoleUtility.Separator();
+
+                Console.WriteLine(ex.Message);
+                
+                ConsoleUtility.Separator();
             }
 
             return jobInfo;
         }
 
-        private async Task RequestJenkinsJob(string jobName, Dictionary<string, string> jobArguments)
+        private async Task RequestJenkinsJob(string jobName, Dictionary<string, string> jobArguments, ChatworkClient.MessageData messageData, CancellationToken cancelToken)
         {
+            var chatworkConfig = ChatworkConfig.Instance;
+            var messageConfig = MessageConfig.Instance;
+
             var jenkinsService = JenkinsService.Instance;
+            
+            var jobInfo = await jenkinsService.RunJenkinsJob(jobName, jobArguments);
 
-            // BRANCH ←外だしする
+            var message = $"[rp aid={messageData.account.account_id} to={chatworkConfig.RoomId}-{messageData.message_id}]\n";
 
-            await jenkinsService.RunJenkinsJob("arms-android-development", new Dictionary<string, string>(){ { "BRANCH", "main" } });
+            switch (jobInfo.Result)
+            {
+                case JobResult.Success:
+                    message += messageConfig.JobSuccess;
+                    break;
+                case JobResult.Failed:
+                    message += messageConfig.JobFailed;
+                    break;
+                case JobResult.Canceled:
+                    message += messageConfig.JobCanceled;
+                    break;
+            }
 
-            //await client.SendMessage();
+            message = message.Replace("#BUILD_NUMBER#", jobInfo.ResultInfo.Number.ToString());
+
+            await client.SendMessage(message, cancelToken);
         }
     }
 }
