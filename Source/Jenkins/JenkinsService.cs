@@ -3,68 +3,139 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using Extensions;
 using JenkinsNET;
 using JenkinsNET.Models;
 using JenkinsNET.Utilities;
+using Kurukuru;
+using Extensions;
 
 namespace ChatworkJenkinsBot
 {
+    public enum JobStatus
+    {
+        None = 0,
+
+        Starting,
+        Queued,
+        Running,
+        Success,
+        Failed,
+        Canceled,
+        Unknown,
+    }
+
+    public enum JobResult
+    {
+        None = 0,
+
+        Success,
+        Failed,
+        Canceled,
+    }
+    
+    public sealed class JobInfo
+    {
+        public string JobName { get; set; }
+
+        public IDictionary<string, string> Parameters { get; set; }
+
+        public JobStatus Status { get; set; }
+
+        public JenkinsBuildBase ResultInfo { get; set; }
+
+        public JobResult Result { get; set; }
+    }
+
     public sealed class JenkinsService : Singleton<JenkinsService>
     {
         //----- params -----
-        
-        public sealed class JobRequest
-        {
 
-        }
-        
         //----- field -----
         
         private JenkinsClient client = null;
 
-        private JenkinsConfig config = null;
-
         //----- property -----
-
 
         //----- method -----
 
-        private JenkinsService(){ }
+        private JenkinsService() { }
 
         public async Task Initialize()
         {
-            Console.WriteLine("Initialize JenkinsService");
+            Console.WriteLine("JenkinsService");
 
-            config = new JenkinsConfig();
+            var config = JenkinsConfig.Instance;
 
             await config.Load();
+
+            client = new JenkinsClient()
+            {
+                BaseUrl = config.BaseUrl,
+                UserName = config.UserName,
+                ApiToken = config.ApiToken,
+            };
         }
 
-        private async Task<JenkinsBuildBase> RunJenkinsJob(string jobName, IDictionary<string, string> jobParameters = null)
+        public string GetJobStatusText(string jobName, string jobArguments, JobStatus status, int? buildNumber = null)
         {
+            var text = $"{status} : ";
+
+            if (buildNumber.HasValue)
+            {
+                text += $"({buildNumber.Value})";
+            }
+
+            text += $"{jobName}";
+
+            if (!string.IsNullOrEmpty(jobArguments))
+            {
+                text += $" {jobArguments}";
+            }
+
+            return text;
+        }
+
+        public async Task<JobInfo> RunJenkinsJob(string jobName, IDictionary<string, string> jobParameters = null)
+        {
+            var jobInfo = new JobInfo()
+            {
+                JobName = jobName,
+                Parameters = jobParameters,
+                Status = JobStatus.Starting,
+            };
+
+            var jobArguments = string.Empty;
+
+            if (jobParameters != null && jobParameters.Any())
+            {
+                var items = jobParameters.Select(x => x.ToString());
+
+                jobArguments = string.Join(", ", items);
+            }
+
+            var spinner = new Spinner(GetJobStatusText(jobName, jobArguments, JobStatus.Starting), Patterns.Dots, ConsoleColor.Cyan);
+
+            spinner.Start();
+
             var runner = new JenkinsJobRunner(client);
 
             runner.StatusChanged += () => 
             {
                 switch (runner.Status) {
                     case JenkinsJobStatus.Queued:
-                        Console.WriteLine("Job is Queued.");
+                        jobInfo.Status = JobStatus.Queued;
+                        spinner.Text = GetJobStatusText(jobName, jobArguments, JobStatus.Queued);
                         break;
                     case JenkinsJobStatus.Building:
-                        Console.WriteLine("Job is Running.");
-                        break;
-                    case JenkinsJobStatus.Complete:
-                        Console.WriteLine("Job is Complete.");
+                        jobInfo.Status = JobStatus.Running;
+                        spinner.Text = GetJobStatusText(jobName, jobArguments, JobStatus.Running);
                         break;
                 }
             };
 
-            Console.WriteLine($"Starting Job '{jobName}'...");
-
             JenkinsBuildBase buildResult = null;
             
-            if(jobParameters != null && jobParameters.Any())
+            if(jobParameters != null &&jobParameters.Any())
             {
                 buildResult = await runner.RunWithParametersAsync(jobName, jobParameters);
             }
@@ -75,17 +146,28 @@ namespace ChatworkJenkinsBot
 
             if (buildResult == null){ return null; }
 
-            if (string.Equals(buildResult.Result, "SUCCESS"))
+            switch (buildResult.Result)
             {
-                Console.WriteLine($"Build #{buildResult.Number} completed successfully.");
-                Console.WriteLine($"Report: {buildResult.Url}");
-            }
-            else
-            {
-                throw new ApplicationException($"Build #{buildResult.Number} Failed!");
+                case "SUCCESS":
+                    jobInfo.Status = JobStatus.Success;
+                    spinner.Succeed(GetJobStatusText(jobName, jobArguments, JobStatus.Success, buildResult.Number));
+                    break;
+                case "FAILURE":
+                    jobInfo.Status = JobStatus.Failed;
+                    spinner.Fail(GetJobStatusText(jobName, jobArguments, JobStatus.Failed, buildResult.Number));
+                    break;
+                case "ABORTED":
+                    jobInfo.Status = JobStatus.Canceled;
+                    spinner.Fail(GetJobStatusText(jobName, jobArguments, JobStatus.Canceled, buildResult.Number));
+                    break;
+                default:
+                    jobInfo.Status = JobStatus.Unknown;
+                    spinner.Stop($"Unknown state : [{buildResult.Number}] {buildResult.Result}.");
+                    break;
+
             }
 
-            return buildResult;
+            return jobInfo;
         }
     }
 }

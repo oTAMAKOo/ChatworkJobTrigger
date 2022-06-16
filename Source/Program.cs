@@ -1,6 +1,7 @@
 ﻿
 using System;
 using System.Runtime.InteropServices;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Extensions;
@@ -11,6 +12,8 @@ namespace ChatworkJenkinsBot
     {
         public static async Task<int> Main(string[] args)
         {
+            Console.OutputEncoding = Encoding.UTF8;
+
             var exitCode = 0;
 
             try
@@ -21,7 +24,7 @@ namespace ChatworkJenkinsBot
 
                 var mainHub = new MainHub();
 
-                await mainHub.Initialize();
+                await mainHub.Initialize(cancelSource.Token);
 
                 while (!cancelSource.IsCancellationRequested)
                 {

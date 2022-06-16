@@ -19,17 +19,19 @@ namespace ChatworkJenkinsBot
 
         //----- method -----
 
-        public async Task Initialize()
+        public async Task Initialize(CancellationToken cancelToken)
         {
-            ConsoleUtility.Separator();
+            Console.WriteLine("\n------ Initialize ----------------\n");
+
+            var messageConfig = MessageConfig.Instance;
+
+            await messageConfig.Load();
 
             // ChatWork.
 
             var chatworkService = ChatworkService.Instance;
 
-            await chatworkService.Initialize();
-
-            ConsoleUtility.Separator();
+            await chatworkService.Initialize(cancelToken);
 
             // Jenkins.
 
@@ -48,9 +50,12 @@ namespace ChatworkJenkinsBot
 
         public async Task Update(CancellationToken cancelToken)
         {
+            var spreadsheetService = SpreadsheetService.Instance;
             var chatworkService = ChatworkService.Instance;
 
-            await chatworkService.Fetch();
+            await spreadsheetService.UpdateProjectSettings(cancelToken);
+
+            await chatworkService.Fetch(cancelToken);
         }
     }
 }
