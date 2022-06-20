@@ -61,19 +61,31 @@ namespace ChatworkJenkinsBot
 
             try
             {
-                var jobName = GetJobName(arguments);
-                var jobParameters = GetJobParameters(arguments);
-
-                jobInfo = await jenkinsService.RunJenkinsJob(jobName, jobParameters, OnJobStatusChanged);
-
-                if (jobInfo != null)
+                if (arguments.FirstOrDefault().ToLower() == "help")
                 {
-                    var resultMessage = string.Empty;
+                    var helpMessage = string.Empty;
 
-                    resultMessage += chatworkService.GetReplyStr(requestMessage);
-                    resultMessage += jenkinsService.GetJobResultMessage(jobInfo);
+                    helpMessage += chatworkService.GetReplyStr(requestMessage);
+                    helpMessage += GetHelpText();
 
-                    await chatworkService.SendMessage(resultMessage, cancelToken);
+                    await chatworkService.SendMessage(helpMessage, cancelToken);
+                }
+                else
+                {
+                    var jobName = GetJobName(arguments);
+                    var jobParameters = GetJobParameters(arguments);
+
+                    jobInfo = await jenkinsService.RunJenkinsJob(jobName, jobParameters, OnJobStatusChanged);
+
+                    if (jobInfo != null)
+                    {
+                        var resultMessage = string.Empty;
+
+                        resultMessage += chatworkService.GetReplyStr(requestMessage);
+                        resultMessage += jenkinsService.GetJobResultMessage(jobInfo);
+
+                        await chatworkService.SendMessage(resultMessage, cancelToken);
+                    }
                 }
             }
             catch (InvalidDataException ex)
@@ -261,7 +273,7 @@ namespace ChatworkJenkinsBot
                 switch (jobStatus)
                 {
                     case JenkinsJobStatus.Queued:
-                        message = chatworkService.GetReplyStr(requestMessage) + textDefine.BuildQueued;
+                        message = chatworkService.GetReplyStr(requestMessage) + textDefine.JobQueued;
                         break;
                 }
 
@@ -275,5 +287,7 @@ namespace ChatworkJenkinsBot
         protected abstract string GetJobName(string[] arguments);
 
         protected abstract Dictionary<string, string> GetJobParameters(string[] arguments);
+
+        protected abstract string GetHelpText();
     }
 }

@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Text;
 using System.Threading.Tasks;
 
 namespace ChatworkJenkinsBot
@@ -31,7 +32,7 @@ namespace ChatworkJenkinsBot
         {
             var jobTriggerConfig = JobTriggerConfig.Instance;
 
-            typeDictionary = ParsePatternStr(jobTriggerConfig.BuildCategory);
+            typeDictionary = ParsePatternStr(jobTriggerConfig.BuildType);
             platformDictionary = ParsePatternStr(jobTriggerConfig.BuildPlatform);
 
             return Task.CompletedTask;
@@ -95,6 +96,32 @@ namespace ChatworkJenkinsBot
             }
 
             return dictionary;
+        }
+
+        protected override string GetHelpText()
+        {
+            var textDefine = TextDefine.Instance;
+            var jobTriggerConfig = JobTriggerConfig.Instance;
+
+            var builder = new StringBuilder();
+
+            builder.Append("[info][title]Build Help[/title]");
+            builder.AppendLine("Format : build [type] [platform] [branch]");
+            builder.AppendLine();
+            builder.AppendLine($"type = {jobTriggerConfig.BuildType}");
+            builder.AppendLine($"platform = {jobTriggerConfig.BuildPlatform}");
+            builder.AppendLine();
+
+            var helpMessage = textDefine.BuildHelp;
+
+            if (!string.IsNullOrEmpty(helpMessage))
+            {
+                builder.Append(helpMessage).AppendLine();
+            }
+
+            builder.AppendLine("[/info]");
+
+            return builder.ToString();
         }
     }
 }

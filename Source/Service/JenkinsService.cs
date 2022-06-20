@@ -173,13 +173,13 @@ namespace ChatworkJenkinsBot
             switch (jobInfo.Status)
             {
                 case JobStatus.Success:
-                    message += textDefine.BuildSuccess;
+                    message += textDefine.JobSuccess;
                     break;
                 case JobStatus.Failed:
-                    message += textDefine.BuildFailed;
+                    message += textDefine.JobFailed;
                     break;
                 case JobStatus.Canceled:
-                    message += textDefine.BuildCanceled;
+                    message += textDefine.JobCanceled;
                     break;
             }
 
