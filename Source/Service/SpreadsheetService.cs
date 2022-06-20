@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Collections;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading;
@@ -20,14 +22,10 @@ namespace ChatworkJenkinsBot
         private const string ClientSecretFileName = "client_secret.json";
 
         private static string[] Scopes = { SheetsService.Scope.SpreadsheetsReadonly };
-
-        private const int UpdateInterval = 30;
         
         //----- field -----
 
         private SheetsService service = null;
-
-        private DateTime nextUpDateTime = default;
         
         //----- property -----
 
@@ -68,14 +66,36 @@ namespace ChatworkJenkinsBot
                 HttpClientInitializer = credential,
                 ApplicationName = applicationName,
             });
-
-            var config = SpreadsheetConfig.Instance;
-
-            await config.Load();
-
-            nextUpDateTime = DateTime.Now;
         }
 
+        public async Task<IList<IList<object>>> GetData(string spreadsheetId, string range, CancellationToken cancelToken)
+        {
+            IList<IList<object>> result = null; 
+
+            try
+            {
+                var request = service.Spreadsheets.Values.Get(spreadsheetId, range);
+
+                var response = await request.ExecuteAsync(cancelToken);
+
+                result = response.Values;
+            }
+            catch (TaskCanceledException)
+            {
+                /* Canceled for exit */
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e);
+
+                throw;
+            }
+            
+            return result;
+        }
+        
+        /*
+        [Obsolete]
         public async Task UpdateProjectSettings(CancellationToken cancelToken)
         {
             var time = DateTime.Now;
@@ -150,5 +170,6 @@ namespace ChatworkJenkinsBot
 
             nextUpDateTime = time.AddSeconds(UpdateInterval);
         }
+        */
     }
 }

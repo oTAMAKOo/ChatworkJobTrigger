@@ -8,12 +8,8 @@ using System.Threading.Tasks;
 
 namespace ChatworkJenkinsBot
 {
-    public class ChatworkClient
+    namespace Chatwork
     {
-        //----- params -----
-
-        private const string ApiUrl = "https://api.chatwork.com/v2/";
-
         [Serializable]
         public sealed class AccountData
         {
@@ -31,18 +27,25 @@ namespace ChatworkJenkinsBot
             public long send_time;
             public long update_time;
         }
+    }
+
+    public class ChatworkClient
+    {
+        //----- params -----
+
+        private const string ApiUrl = "https://api.chatwork.com/v2/";
 
         //----- field -----
 
         //----- property -----
 
-        public long RoomId { get; private set; }
+        public string RoomId { get; private set; }
 
         public string ApiToken { get; private set; }
 
         //----- method -----
 
-        public ChatworkClient(long roomId, string apiToken)
+        public ChatworkClient(string roomId, string apiToken)
         {
             RoomId = roomId;
             ApiToken = apiToken;

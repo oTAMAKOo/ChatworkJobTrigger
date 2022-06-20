@@ -9,7 +9,7 @@ using IniFileParser.Model;
 
 namespace ChatworkJenkinsBot
 {
-    public abstract class ConfigBase<TInstance> : Singleton<TInstance> where TInstance : ConfigBase<TInstance>
+    public abstract class IniFile<TInstance> : Singleton<TInstance> where TInstance : IniFile<TInstance>
     {
         //----- params -----
 
@@ -19,26 +19,28 @@ namespace ChatworkJenkinsBot
 
         //----- property -----
 
-        public abstract string ConfigIniName { get; }
+        public abstract string FileName { get; }
 
         //----- method -----
 
         public async Task Load()
         {
-            var parser = new IniStringParser();
+            var fileName = FileName + ".ini";
 
             var configFileDirectory = ConfigUtility.GetConfigFolderDirectory();
 
-            var configFilePath = PathUtility.Combine(configFileDirectory, ConfigIniName);
+            var configFilePath = PathUtility.Combine(configFileDirectory, fileName);
 
             if (!File.Exists(configFilePath))
             {
                 CreateDefaultConfigFile(configFilePath);
 
-                throw new Exception($"Generated {ConfigIniName} file.\nPlease edit {configFilePath}.");
+                throw new Exception($"Generated {fileName} file.\nPlease edit {configFilePath}.");
             }
 
             var iniDataString = await File.ReadAllTextAsync(configFilePath);
+
+            var parser = new IniStringParser();
 
             iniData = parser.Parse(iniDataString);
 

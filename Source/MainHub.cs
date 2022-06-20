@@ -24,41 +24,70 @@ namespace ChatworkJenkinsBot
         {
             Console.WriteLine("\n------ Initialize ----------------\n");
 
-            var messageConfig = MessageConfig.Instance;
+            // IniFiles.
 
-            await messageConfig.Load();
+            var textDefine = TextDefine.CreateInstance();
+
+            await textDefine.Load();
+
+            var setting = Setting.CreateInstance();
+
+            await setting.Load();
+
+            var jobTriggerConfig = JobTriggerConfig.CreateInstance();
+
+            await jobTriggerConfig.Load();
 
             // ChatWork.
 
-            var chatworkService = ChatworkService.Instance;
+            var chatworkService = ChatworkService.CreateInstance();
 
             await chatworkService.Initialize(cancelToken);
 
             // Jenkins.
 
-            var jenkinsService = JenkinsService.Instance;
+            var jenkinsService = JenkinsService.CreateInstance();
 
             await jenkinsService.Initialize();
 
             // Spreadsheet.
 
-            var spreadsheetService = SpreadsheetService.Instance;
+            var spreadsheetService = SpreadsheetService.CreateInstance();
 
             await spreadsheetService.Initialize();
+
+            // JobTrigger.
+
+            var jobTriggerService = JobTriggerService.CreateInstance();
+
+            await jobTriggerService.Initialize();
 
             ConsoleUtility.Separator();
         }
 
         public async Task Update(CancellationToken cancelToken)
         {
-            var spreadsheetService = SpreadsheetService.Instance;
+            var jobTriggerService = JobTriggerService.Instance;
             var chatworkService = ChatworkService.Instance;
 
             try
             {
-                await spreadsheetService.UpdateProjectSettings(cancelToken);
+                // 設定取得.
+                await jobTriggerService.Fetch(cancelToken);
 
-                await chatworkService.Fetch(cancelToken);
+                // 新規メッセージ取得.
+                var messages = await chatworkService.Fetch(cancelToken);
+
+                // ジョブトリガー実行.
+                if (messages.Any())
+                {
+                    foreach (var message in messages)
+                    {
+                        if(!jobTriggerService.IsTriggerMessage(message)){ continue; }
+
+                        await jobTriggerService.InvokeTrigger(message, cancelToken);
+                    }
+                }
             }
             catch (Exception e)
             {
