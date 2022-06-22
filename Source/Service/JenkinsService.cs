@@ -8,7 +8,7 @@ using JenkinsNET.Utilities;
 using Kurukuru;
 using Extensions;
 
-namespace ChatworkJenkinsBot
+namespace ChatworkJobTrigger
 {
     public enum JobStatus
     {

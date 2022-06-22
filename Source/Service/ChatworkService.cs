@@ -4,9 +4,9 @@ using System.Threading;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
 using Extensions;
-using ChatworkJenkinsBot.Chatwork;
+using ChatworkJobTrigger.Chatwork;
 
-namespace ChatworkJenkinsBot
+namespace ChatworkJobTrigger
 {
     public sealed class ChatworkService : Singleton<ChatworkService>
     {

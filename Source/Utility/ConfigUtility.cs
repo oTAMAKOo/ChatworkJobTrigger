@@ -3,7 +3,7 @@ using System.IO;
 using System.Reflection;
 using Extensions;
 
-namespace ChatworkJenkinsBot
+namespace ChatworkJobTrigger
 {
     public static class ConfigUtility
     {

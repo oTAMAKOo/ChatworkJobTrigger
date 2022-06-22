@@ -6,7 +6,7 @@ using System.Text;
 using System.Threading.Tasks;
 using Extensions;
 
-namespace ChatworkJenkinsBot
+namespace ChatworkJobTrigger
 {
     public sealed class MasterJobTrigger : JobTrigger<MasterJobTrigger>
     {

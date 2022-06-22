@@ -1,7 +1,7 @@
 ﻿
 using IniFileParser.Model;
 
-namespace ChatworkJenkinsBot
+namespace ChatworkJobTrigger
 {
     public sealed class Setting : IniFile<Setting>
     {

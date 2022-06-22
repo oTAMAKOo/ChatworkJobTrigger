@@ -6,9 +6,9 @@ using System.Threading;
 using System.Threading.Tasks;
 using JenkinsNET;
 using Extensions;
-using ChatworkJenkinsBot.Chatwork;
+using ChatworkJobTrigger.Chatwork;
 
-namespace ChatworkJenkinsBot
+namespace ChatworkJobTrigger
 {
     public interface IJobTrigger
     {

@@ -8,7 +8,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Extensions;
 
-namespace ChatworkJenkinsBot
+namespace ChatworkJobTrigger
 {
     public sealed class MainHub
     {

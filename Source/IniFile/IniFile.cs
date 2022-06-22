@@ -7,7 +7,7 @@ using Extensions;
 using IniFileParser;
 using IniFileParser.Model;
 
-namespace ChatworkJenkinsBot
+namespace ChatworkJobTrigger
 {
     public abstract class IniFile<TInstance> : Singleton<TInstance> where TInstance : IniFile<TInstance>
     {

@@ -13,7 +13,7 @@ using Extensions;
 
 using DateTime = System.DateTime;
 
-namespace ChatworkJenkinsBot
+namespace ChatworkJobTrigger
 {
     public sealed class SpreadsheetService : Singleton<SpreadsheetService>
     {

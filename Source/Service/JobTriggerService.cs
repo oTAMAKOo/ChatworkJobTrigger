@@ -5,9 +5,9 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Extensions;
-using ChatworkJenkinsBot.Chatwork;
+using ChatworkJobTrigger.Chatwork;
 
-namespace ChatworkJenkinsBot
+namespace ChatworkJobTrigger
 {
     public sealed class JobTriggerInfo
     {
