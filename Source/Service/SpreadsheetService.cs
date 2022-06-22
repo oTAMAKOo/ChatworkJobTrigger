@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 using Google.Apis.Auth.OAuth2;
@@ -39,27 +40,26 @@ namespace ChatworkJobTrigger
 
             UserCredential credential;
 
-            var configFileDirectory = ConfigUtility.GetConfigFolderDirectory();
+            var configFolderDirectory = ConfigUtility.GetConfigFolderDirectory();
 
-            var clientSecretFilePath = PathUtility.Combine(configFileDirectory, ClientSecretFileName);
+            var clientSecretFilePath = PathUtility.Combine(configFolderDirectory, ClientSecretFileName);
 
             if (!File.Exists(clientSecretFilePath))
             {
                 throw new FileNotFoundException(clientSecretFilePath);
             }
 
+            var applicationName = AssemblyUtility.GetName();
+            var executePath = AssemblyUtility.GetExecutePath(); 
+
             await using (var stream = new FileStream(clientSecretFilePath, FileMode.Open, FileAccess.Read))
             {
-                var credPath = "token.json";
-
                 var secrets = await GoogleClientSecrets.FromStreamAsync(stream);
                 var token = CancellationToken.None;
-                var fileDataStore = new FileDataStore(credPath, true);
+                var fileDataStore = new FileDataStore(executePath, true);
 
                 credential = await GoogleWebAuthorizationBroker.AuthorizeAsync(secrets.Secrets, Scopes, "user", token, fileDataStore);
             }
-
-            var applicationName = System.Reflection.Assembly.GetExecutingAssembly().GetName().Name;
 
             service = new SheetsService(new BaseClientService.Initializer()
             {

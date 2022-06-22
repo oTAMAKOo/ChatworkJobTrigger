@@ -9,16 +9,10 @@ namespace ChatworkJobTrigger
     {
         public const string ConfigFolderName = "config";
 
-        private static string GetExecutePath()
-        {
-            var assembly = Assembly.GetEntryAssembly();
-            
-            return Path.GetDirectoryName(assembly.Location);
-        }
-
         public static string GetConfigFolderDirectory()
         {
-            var configFileDirectory = PathUtility.Combine(GetExecutePath(), ConfigFolderName);
+            var executePath = AssemblyUtility.GetExecutePath();
+            var configFileDirectory = PathUtility.Combine(executePath, ConfigFolderName);
 
             if (!Directory.Exists(configFileDirectory))
             {
