@@ -21,6 +21,7 @@ namespace ChatworkJobTrigger
         private const string JenkinsBaseUrlField = "BaseUrl";
         private const string JenkinsUserNameField = "UserName";
         private const string JenkinsApiTokenField = "ApiToken";
+        private const string JenkinsLogFilePathField = "LogFilePath";
 
         //----- field -----
         
@@ -36,6 +37,7 @@ namespace ChatworkJobTrigger
         public string JenkinsBaseUrl { get { return GetData<string>(JenkinsSection, JenkinsBaseUrlField); } }
         public string JenkinsUserName { get { return GetData<string>(JenkinsSection, JenkinsUserNameField); } }
         public string JenkinsApiToken { get { return GetData<string>(JenkinsSection, JenkinsApiTokenField); } }
+        public string JenkinsLogFilePath { get { return GetData<string>(JenkinsSection, JenkinsLogFilePathField); } }
         
         //----- method -----
 
@@ -49,6 +51,7 @@ namespace ChatworkJobTrigger
             data[JenkinsSection][JenkinsBaseUrlField] = "http://localhost:8080/";
             data[JenkinsSection][JenkinsUserNameField] = "admin";
             data[JenkinsSection][JenkinsApiTokenField] = "ABCDEFG123456789";
+            data[JenkinsSection][JenkinsLogFilePathField] = "/Users/<UserName>/.jenkins/jobs/#JOB_NAME#/builds/#BUILD_NUMBER#/log";
         }
     }
 }

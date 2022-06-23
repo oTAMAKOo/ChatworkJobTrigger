@@ -84,7 +84,33 @@ namespace ChatworkJobTrigger
                         resultMessage += chatworkService.GetReplyStr(requestMessage);
                         resultMessage += jenkinsService.GetJobResultMessage(jobInfo);
 
-                        await chatworkService.SendMessage(resultMessage, cancelToken);
+                        // ジョブ失敗時にはジョブのログファイルを送る.
+
+                        var filePath = string.Empty;
+
+                        if (jobInfo.Status == JobStatus.Failed)
+                        {
+                            if (jobInfo.ResultInfo != null && jobInfo.ResultInfo.Number.HasValue)
+                            {
+                                var buildNumber = jobInfo.ResultInfo.Number.Value;
+                                
+                                filePath = jenkinsService.GetLogFilePath(jobInfo.JobName, buildNumber);
+
+                                if (!File.Exists(filePath))
+                                {
+                                    filePath = null;
+                                }
+                            }
+                        }
+
+                        if (string.IsNullOrEmpty(filePath))
+                        {
+                            await chatworkService.SendMessage(resultMessage, cancelToken);
+                        }
+                        else
+                        {
+                            await chatworkService.SendFile(filePath, resultMessage, "log.txt", cancelToken);
+                        }
                     }
                 }
             }

@@ -127,48 +127,6 @@ namespace ChatworkJobTrigger
                     }
                 }
             }
-
-            // ArgumentCandidate.
-            {
-                var request = service.Spreadsheets.Values.Get(spreadsheetId, spreadsheetConfig.ArgumentCandidateRange);
-
-                var response = await request.ExecuteAsync(cancelToken);
-
-                var values = response.Values;
-
-                if (values != null && 0 < values.Count)
-                {
-                    foreach (var row in values)
-                    {
-                        var key = row[0].ToString();
-                        var candidates = row.Skip(1).Cast<string>().ToArray();
-
-                        model.SetCandidates(key, candidates);
-                    }
-                }
-            }
-            
-            // JobName.
-            {
-                var request = service.Spreadsheets.Values.Get(spreadsheetId, spreadsheetConfig.JobNameRange);
-
-                var response = await request.ExecuteAsync(cancelToken);
-
-                var values = response.Values;
-
-                if (values != null && 0 < values.Count)
-                {
-                    foreach (var row in values)
-                    {
-                        var key = row[0].ToString();
-                        var jobName = row.Skip(1).Cast<string>().First();
-
-                        model.SetJobName(key, jobName);
-                    }
-                }
-            }
-
-            nextUpDateTime = time.AddSeconds(UpdateInterval);
         }
         */
     }

@@ -94,7 +94,6 @@ namespace ChatworkJobTrigger
             builder.AppendLine();
             builder.AppendLine($"server = {jobTriggerConfig.ResourceServer}");
             builder.AppendLine($"platform = {jobTriggerConfig.ResourcePlatform}");
-            builder.AppendLine();
 
             var helpMessage = textDefine.ResourceHelp;
 

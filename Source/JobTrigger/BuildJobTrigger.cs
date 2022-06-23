@@ -110,7 +110,6 @@ namespace ChatworkJobTrigger
             builder.AppendLine();
             builder.AppendLine($"type = {jobTriggerConfig.BuildType}");
             builder.AppendLine($"platform = {jobTriggerConfig.BuildPlatform}");
-            builder.AppendLine();
 
             var helpMessage = textDefine.BuildHelp;
 

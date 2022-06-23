@@ -76,7 +76,6 @@ namespace ChatworkJobTrigger
             builder.AppendLine("Format : master [server] [branch]");
             builder.AppendLine();
             builder.AppendLine($"server = {jobTriggerConfig.MasterServer}");
-            builder.AppendLine();
 
             var helpMessage = textDefine.MasterHelp;
 

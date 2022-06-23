@@ -96,5 +96,10 @@ namespace ChatworkJobTrigger
         {
             await client.SendMessage(message, cancelToken);
         }
+
+        public async Task SendFile(string filePath, string message, string displayName, CancellationToken cancelToken)
+        {
+            await client.SendFile(filePath, message, displayName, cancelToken);
+        }
     }
 }

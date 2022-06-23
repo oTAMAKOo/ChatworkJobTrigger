@@ -37,14 +37,14 @@ namespace ChatworkJobTrigger
 
         protected override void SetDefaultData(ref IniData data)
         {
-            data[BuildSection][JobNameFormatField] = "jobname-#TYPE#-#PLATFORM#";
+            data[BuildSection][JobNameFormatField] = "jobname-#PLATFORM#-#TYPE#";
             data[BuildSection][BuildTypeField] = "development[dev, develop],staging[stg], production[prod]";
             data[BuildSection][PlatformField] = "ios, android";
 
             data[MasterSection][JobNameFormatField] = "jobname-master";
             data[MasterSection][ServerField] = "dev1, dev2, dev3, staging, production";
 
-            data[ResourceSection][JobNameFormatField] = "jobname-resource-#TYPE#-#PLATFORM#";
+            data[ResourceSection][JobNameFormatField] = "jobname-#PLATFORM#-resource";
             data[ResourceSection][ServerField] = "dev1, dev2, dev3, staging, production";
             data[ResourceSection][PlatformField] = "ios, android";
 

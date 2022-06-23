@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Net.Http;
 using System.Text;
@@ -161,6 +162,59 @@ namespace ChatworkJobTrigger
                     else
                     {
                         Console.WriteLine(response.ToString());
+                    }
+                }
+            }
+
+            return result;
+        }
+
+        public async Task<string> SendFile(string filePath, string message = null, string displayName = null, CancellationToken cancelToken = default)
+        {
+            if (!File.Exists(filePath)){ return null; }
+
+            if (string.IsNullOrEmpty(displayName))
+            {
+                displayName = Path.GetFileName(filePath);
+            }
+
+            var result = string.Empty;
+
+            using (var httpClient = new HttpClient())
+            {
+                httpClient.DefaultRequestHeaders.Add("X-ChatWorkToken", ApiToken);
+
+                using (var multipart = new MultipartFormDataContent("---boundary---"))
+                {
+                    // ファイル.
+
+                    var fileContent = new StreamContent(File.OpenRead(filePath));
+
+                    fileContent.Headers.Add("Content-Disposition", $@"form-data; name=""file""; filename=""{displayName}""");
+
+                    multipart.Add(fileContent);
+
+                    // メッセージ.
+
+                    if (!string.IsNullOrEmpty(message))
+                    {
+                        var messageContent = new StreamContent(new MemoryStream(Encoding.UTF8.GetBytes(message)));
+
+                        messageContent.Headers.Add("Content-Disposition", $@"form-data; name=""message""");
+
+                        multipart.Add(messageContent);
+                    }
+
+                    // 送信.
+
+                    var requestUrl = GetRequestUri("files");
+
+                    using (var response = await httpClient.PostAsync(requestUrl, multipart, cancelToken))
+                    {
+                        if (response.IsSuccessStatusCode)
+                        {
+                            result = await response.Content.ReadAsStringAsync(cancelToken);
+                        }
                     }
                 }
             }

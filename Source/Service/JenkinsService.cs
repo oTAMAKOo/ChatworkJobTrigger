@@ -140,6 +140,8 @@ namespace ChatworkJobTrigger
 
             if (buildResult == null){ return null; }
 
+            jobInfo.ResultInfo = buildResult;
+
             switch (buildResult.Result)
             {
                 case "SUCCESS":
@@ -158,7 +160,6 @@ namespace ChatworkJobTrigger
                     jobInfo.Status = JobStatus.Unknown;
                     spinner.Stop($"Unknown state : [{buildResult.Number}] {buildResult.Result}.");
                     break;
-
             }
 
             return jobInfo;
@@ -191,6 +192,15 @@ namespace ChatworkJobTrigger
             }
 
             return message;
+        }
+
+        public string GetLogFilePath(string jobName, int buildNumber)
+        {
+            var setting = Setting.Instance;
+
+            var logFilePath = setting.JenkinsLogFilePath;
+
+            return logFilePath.Replace("#JOB_NAME#", jobName).Replace("#BUILD_NUMBER#", buildNumber.ToString());
         }
     }
 }
