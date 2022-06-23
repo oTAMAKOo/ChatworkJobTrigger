@@ -17,13 +17,10 @@ namespace ChatworkJobTrigger
         private const string ErrorSection = "Error";
 
         private const string CommandErrorField = "CommandError";
-
-        private const string HelpSection = "Help";
-
-        private const string BuildHelpField = "Build";
-        private const string MasterHelpField = "Master";
-        private const string ResourceHelpField = "Resource";
-
+        private const string ArgumentNotFoundErrorField = "ArgumentNotFound";
+        private const string UndefinedValueErrorField = "UndefinedValue";
+        private const string UndefinedTypeErrorField = "UndefinedType";
+        
         //----- field -----
         
         //----- property -----
@@ -36,10 +33,9 @@ namespace ChatworkJobTrigger
         public string JobCanceled { get { return GetData<string>(JobSection, JobCanceledField); } }
 
         public string CommandError { get { return GetData<string>(ErrorSection, CommandErrorField); } }
-
-        public string BuildHelp { get { return GetData<string>(HelpSection, BuildHelpField); } }
-        public string MasterHelp { get { return GetData<string>(HelpSection, MasterHelpField); } }
-        public string ResourceHelp { get { return GetData<string>(HelpSection, ResourceHelpField); } }
+        public string ArgumentNotFoundError { get { return GetData<string>(ErrorSection, ArgumentNotFoundErrorField); } }
+        public string UndefinedValueError { get { return GetData<string>(ErrorSection, UndefinedValueErrorField); } }
+        public string UndefinedTypeError { get { return GetData<string>(ErrorSection, UndefinedTypeErrorField); } }
 
         //----- method -----
 
@@ -51,10 +47,9 @@ namespace ChatworkJobTrigger
             data[JobSection][JobCanceledField] = "JobCanceled. [#BUILD_NUMBER#]";
 
             data[ErrorSection][CommandErrorField] = "Request command error.";
-
-            data[HelpSection][BuildHelpField] = "";
-            data[HelpSection][MasterHelpField] = "";
-            data[HelpSection][ResourceHelpField] = "";
+            data[ErrorSection][ArgumentNotFoundErrorField] = "Argument {0} is required.";
+            data[ErrorSection][UndefinedValueErrorField] = "Undefined value {0}.";
+            data[ErrorSection][UndefinedTypeErrorField] = "Undefined type {0} is defined.";
         }
     }
 }

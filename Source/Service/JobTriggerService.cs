@@ -29,16 +29,8 @@ namespace ChatworkJobTrigger
     public sealed class JobTriggerService : Singleton<JobTriggerService>
     {
         //----- params -----
-
-        private const int FetchIntervalSeconds = 60;
-
+        
         //----- field -----
-
-        private IJobTrigger[] jobTriggers = null;
-
-        private DateTime fetchTime = default;
-
-        private DateTime nextFetchTime = default;
 
         //----- property -----
 
@@ -48,17 +40,9 @@ namespace ChatworkJobTrigger
 
         public async Task Initialize()
         {
-            jobTriggers = new IJobTrigger[]
-            {
-                BuildJobTrigger.Instance,
-                MasterJobTrigger.Instance,
-                ResourceJobTrigger.Instance,
-            };
+            var jobTrigger = JobTrigger.Instance;
 
-            foreach (var jobTrigger in jobTriggers)
-            {
-                await jobTrigger.Initialize();
-            }
+            await jobTrigger.Initialize();
         }
 
         public bool IsTriggerMessage(MessageData messageData)
@@ -81,33 +65,19 @@ namespace ChatworkJobTrigger
             return $"[To:{myAccount.account_id}]{myAccount.name}";
         }
 
-        public async Task Fetch(CancellationToken cancelToken)
-        {
-            var time = DateTime.Now;
-
-            if (time < nextFetchTime){ return; }
-
-            foreach (var jobTrigger in jobTriggers)
-            {
-                await jobTrigger.Fetch(cancelToken);
-            }
-
-            fetchTime = time;
-
-            nextFetchTime = time.AddSeconds(FetchIntervalSeconds);
-        }
-
         public async Task InvokeTrigger(MessageData message, CancellationToken cancelToken)
         {
+            var jobTrigger = JobTrigger.Instance;
+
             var triggerInfo = GetJobTriggerInfo(message);
 
-            foreach (var jobTrigger in jobTriggers)
+            foreach (var command in jobTrigger.Commands)
             {
-                if(jobTrigger.CommandName != triggerInfo.Command){ continue; }
+                if(command.CommandName != triggerInfo.Command){ continue; }
 
                 jobTrigger.SetRequestMessageData(message);
 
-                await jobTrigger.Invoke(triggerInfo.Arguments, cancelToken);
+                await jobTrigger.Invoke(command, triggerInfo.Arguments, cancelToken);
             }
         }
 

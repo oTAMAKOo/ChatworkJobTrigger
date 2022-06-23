@@ -10,36 +10,37 @@ using ChatworkJobTrigger.Chatwork;
 
 namespace ChatworkJobTrigger
 {
-    public interface IJobTrigger
-    {
-        string CommandName { get; }
-
-        Task Initialize();
-
-        void SetRequestMessageData(MessageData requestMessage);
-
-        Task Fetch(CancellationToken cancelToken);
-
-        Task<JobInfo> Invoke(string[] arguments, CancellationToken cancelToken);
-    }
-
-    public abstract class JobTrigger<TInstance> : Singleton<TInstance> , IJobTrigger where TInstance : JobTrigger<TInstance>
+    public sealed class JobTrigger : Singleton<JobTrigger>
     {
         //----- params -----
 
         //----- field -----
-
-        protected MessageData requestMessage = null;
+        
+        private MessageData requestMessage = null;
 
         //----- property -----
 
-        public abstract string CommandName { get; }
+        public Command[] Commands { get; private set; }
 
         //----- method -----
 
-        public virtual Task Initialize()
+        public async Task Initialize()
         {
-            return Task.CompletedTask;
+            var setting = Setting.Instance;
+            var commandFileLoader = CommandFileLoader.Instance;
+
+            var commandList = new List<Command>();
+
+            var commandNames = setting.Commands.Split(',').Select(x => x.Trim()).ToArray();
+
+            foreach (var commandName in commandNames)
+            {
+                var command = await commandFileLoader.Load(commandName);
+
+                commandList.Add(command);
+            }
+
+            Commands = commandList.ToArray();
         }
 
         public void SetRequestMessageData(MessageData requestMessage)
@@ -47,12 +48,7 @@ namespace ChatworkJobTrigger
             this.requestMessage = requestMessage;
         }
 
-        public virtual Task Fetch(CancellationToken cancelToken)
-        {
-            return Task.CompletedTask;
-        }
-
-        public async Task<JobInfo> Invoke(string[] arguments, CancellationToken cancelToken)
+        public async Task Invoke(Command command, string[] arguments, CancellationToken cancelToken)
         {
             var chatworkService = ChatworkService.Instance;
             var jenkinsService = JenkinsService.Instance;
@@ -66,16 +62,17 @@ namespace ChatworkJobTrigger
                     var helpMessage = string.Empty;
 
                     helpMessage += chatworkService.GetReplyStr(requestMessage);
-                    helpMessage += GetHelpText();
+                    helpMessage += command.GetHelpText();
 
                     await chatworkService.SendMessage(helpMessage, cancelToken);
                 }
                 else
                 {
-                    var jobName = GetJobName(arguments);
-                    var jobParameters = GetJobParameters(arguments);
+                    var jobData = await BuildJobData(command, arguments, cancelToken);
 
-                    jobInfo = await jenkinsService.RunJenkinsJob(jobName, jobParameters, OnJobStatusChanged);
+                    if (jobData == null){ return; }
+
+                    jobInfo = await jenkinsService.RunJenkinsJob(jobData.Item1, jobData.Item2, OnJobStatusChanged);
 
                     if (jobInfo != null)
                     {
@@ -114,19 +111,6 @@ namespace ChatworkJobTrigger
                     }
                 }
             }
-            catch (InvalidDataException ex)
-            {
-                // コマンドが間違っている通知.
-
-                if (requestMessage != null)
-                {
-                    var textDefine = TextDefine.Instance;
-
-                    var message = chatworkService.GetReplyStr(requestMessage) + textDefine.CommandError + $"\n{ex.Message}";
-
-                    await chatworkService.SendMessage(message, cancelToken);
-                }
-            }
             catch (Exception ex)
             {
                 // エラー通知.
@@ -146,31 +130,130 @@ namespace ChatworkJobTrigger
                 
                 ConsoleUtility.Separator();
             }
+        }
 
-            return jobInfo;
-        } 
-        
-        protected Dictionary<string, string> ParseArguments(string[] argumentNames, string[] arguments)
+        private async Task<Tuple<string, Dictionary<string, string>>> BuildJobData(Command command, string[] arguments, CancellationToken cancelToken)
+        {
+            var chatworkService = ChatworkService.Instance;
+
+            var jobName = string.Empty;
+            var jobParameters = new Dictionary<string, string>();
+
+            try
+            {
+                jobParameters = GetJobParameters(command, arguments);
+
+                ValidateJobParameters(command, jobParameters);
+
+                jobName = GetJobName(command, jobParameters);
+            }
+            catch (Exception ex)
+            {
+                // コマンドが間違っている通知.
+
+                if (requestMessage != null)
+                {
+                    var textDefine = TextDefine.Instance;
+
+                    var message = chatworkService.GetReplyStr(requestMessage);
+                    
+                    if (!string.IsNullOrEmpty(textDefine.CommandError))
+                    {
+                        message += textDefine.CommandError + "\n";
+                    }
+                    
+                    message += ex.Message;
+
+                    await chatworkService.SendMessage(message, cancelToken);
+                }
+
+                return null;
+            }
+
+            return Tuple.Create(jobName, jobParameters);
+        }
+
+        private void ValidateJobParameters(Command command, Dictionary<string, string> jobParameters)
+        {
+            var textDefine = TextDefine.Instance;
+
+            foreach (var argument in command.Arguments)
+            {
+                if (argument.Require)
+                {
+                    // 存在しない.
+
+                    if (!jobParameters.ContainsKey(argument.Field))
+                    {
+                        throw new ArgumentException(string.Format(textDefine.ArgumentNotFoundError, argument.Field));
+                    }
+
+                    // 候補一覧に値が存在しない.
+
+                    if (argument.ValuePattern.Any())
+                    {
+                        var value = jobParameters[argument.Field];
+                        var valueStr = argument.ConvertValue(value);
+
+                        if (string.IsNullOrEmpty(valueStr))
+                        {
+                            throw new ArgumentException(string.Format(textDefine.UndefinedValueError, value));
+                        }
+                    }
+                }
+            }
+        }
+
+        private string GetJobName(Command command, Dictionary<string, string> jobParameters)
+        {
+            var jobName = command.JobNameFormat;
+
+            var fieldNames = command.Arguments.Select(x => x.Field).ToArray();
+
+            foreach (var fieldName in fieldNames)
+            {
+                var value = jobParameters.GetValueOrDefault(fieldName);
+
+                jobName = jobName.Replace($"#{fieldName.ToUpper()}#", value);
+            }
+
+            return jobName;
+        }
+
+        private Dictionary<string, string> GetJobParameters(Command command, string[] arguments)
         {
             var dictionary = new Dictionary<string, string>();
+
+            var fieldNames = command.Arguments.Select(x => x.Field).ToArray();
 
             //----- 引数名:引数で順番無視で登録 -----
 
             foreach (var argument in arguments)
             {
                 if (!argument.Contains(":")){ continue; }
+
+                var lowerStr = argument.Trim().ToLower();
                 
-                foreach (var argumentName in argumentNames)
+                foreach (var commandArgument in command.Arguments)
                 {
-                    var tag = argumentName.ToLower().Trim() + ":";
+                    var tag = commandArgument.Field.ToLower() + ":";
 
-                    if (!argument.ToLower().StartsWith(tag)){ continue; }
+                    if (!lowerStr.StartsWith(tag)){ continue; }
 
-                    if (!dictionary.ContainsKey(argumentName))
+                    if (!dictionary.ContainsKey(commandArgument.Field))
                     {
-                        var value = argument.Substring(tag.Length);
+                        var temp = argument.Substring(tag.Length).Trim();
 
-                        dictionary.Add(argumentName, value);
+                        if (string.IsNullOrEmpty(temp))
+                        {
+                            temp = commandArgument.DefaultValue;
+                        }
+
+                        var valueStr = commandArgument.ConvertValue(temp);
+
+                        var value = ConvertValue(commandArgument.Type, valueStr);
+
+                        dictionary.Add(commandArgument.Field, value);
                     }
                 }
             }
@@ -179,114 +262,44 @@ namespace ChatworkJobTrigger
 
             // 登録済みの引数名除外.
 
-            argumentNames = argumentNames.Where(x => !dictionary.ContainsKey(x)).ToArray();
+            fieldNames = fieldNames.Where(x => !dictionary.ContainsKey(x)).ToArray();
             arguments = arguments.Where(x => !x.Contains(":")).ToArray();
 
             for (var i = 0; i < arguments.Length; i++)
             {
                 var argument = arguments[i];
 
-                var argumentName = argumentNames.ElementAtOrDefault(i);
+                var fieldName = fieldNames.ElementAtOrDefault(i);
+                var commandArgument = command.Arguments.FirstOrDefault(x => x.Field == fieldName);
 
-                if (!string.IsNullOrEmpty(argumentName) && !dictionary.ContainsKey(argumentName))
+                if (!string.IsNullOrEmpty(fieldName) && !dictionary.ContainsKey(fieldName))
                 {
-                    dictionary.Add(argumentName, argument);
+                    var valueStr = commandArgument.ConvertValue(argument);
+                    var value = ConvertValue(commandArgument.Type, valueStr);
+
+                    dictionary.Add(fieldName, value);
                 } 
             }
 
             return dictionary;
         }
-
-        protected Dictionary<string, string[]> ParsePatternStr(string target)
+        
+        private string ConvertValue(Type type, string value)
         {
-            var dictionary = new Dictionary<string, string[]>();
-
-            var patternStrs = new List<string>();
-
-            var inPattern = false;
-            var buffer = string.Empty;
-
-            foreach (var str in target)
+            if (type == typeof(bool))
             {
-                if (str == '[')
-                {
-                    inPattern = true;
-                    buffer = string.Empty;
-                }
-
-                if (inPattern)
-                {
-                    buffer += str;
-
-                    if (str == ']')
-                    {
-                        if (!string.IsNullOrEmpty(buffer))
-                        {
-                            patternStrs.Add(buffer.Trim());
-                        }
-
-                        inPattern = false;
-                        buffer = string.Empty;
-                    }
-                }
+                value = bool.Parse(value).ToString().ToLower();
             }
 
-            var patternTable = new Dictionary<string, string>();
-
-            for (var i = 0; i < patternStrs.Count; i++)
+            if (type == typeof(int))
             {
-                var pattern = patternStrs[i];
-
-                var tempStr = $"###{i}###";
-                
-                target = target.Replace(pattern, tempStr);
-
-                patternTable.Add(tempStr, pattern);
+                value = int.Parse(value).ToString();
             }
 
-            var elements = target.Split(',');
-
-            foreach (var element in elements)
-            {
-                var str = element;
-                var patterns = new string[0];
-
-                foreach (var item in patternTable)
-                {
-                    if (element.Contains(item.Key))
-                    {
-                        str = str.Replace(item.Key, string.Empty);
-
-                        patterns = item.Value.Substring(1, item.Value.Length - 2)
-                            .Split(',')
-                            .Select(x => x.Trim())
-                            .ToArray();
-                    }
-                }
-
-                dictionary.Add(str.Trim(), patterns);
-            }
-
-            return dictionary;
+            return value;
         }
 
-        protected string ReplacePatternStr(string str, Dictionary<string, string[]> patterns)
-        {
-            foreach (var item in patterns)
-            {
-                foreach (var pattern in item.Value)
-                {
-                    if (pattern == str)
-                    {
-                        return item.Key;
-                    }
-                }
-            }
-
-            return str;
-        }
-
-        public virtual void OnJobStatusChanged(JenkinsJobStatus jobStatus)
+        private void OnJobStatusChanged(JenkinsJobStatus jobStatus)
         {
             var chatworkService = ChatworkService.Instance;
 
@@ -309,11 +322,5 @@ namespace ChatworkJobTrigger
                 }
             }
         }
-
-        protected abstract string GetJobName(string[] arguments);
-
-        protected abstract Dictionary<string, string> GetJobParameters(string[] arguments);
-
-        protected abstract string GetHelpText();
     }
 }

@@ -1,9 +1,6 @@
 ﻿
 using System;
-using System.Collections.Generic;
-using System.IO;
 using System.Linq;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Extensions;
@@ -34,10 +31,6 @@ namespace ChatworkJobTrigger
 
             await setting.Load();
 
-            var jobTriggerConfig = JobTriggerConfig.CreateInstance();
-
-            await jobTriggerConfig.Load();
-
             // ChatWork.
 
             var chatworkService = ChatworkService.CreateInstance();
@@ -49,12 +42,6 @@ namespace ChatworkJobTrigger
             var jenkinsService = JenkinsService.CreateInstance();
 
             await jenkinsService.Initialize();
-
-            // Spreadsheet.
-
-            var spreadsheetService = SpreadsheetService.CreateInstance();
-
-            await spreadsheetService.Initialize();
 
             // JobTrigger.
 
@@ -72,9 +59,6 @@ namespace ChatworkJobTrigger
 
             try
             {
-                // 設定取得.
-                await jobTriggerService.Fetch(cancelToken);
-
                 // 新規メッセージ取得.
                 var messages = await chatworkService.Fetch(cancelToken);
 

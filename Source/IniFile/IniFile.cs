@@ -62,6 +62,11 @@ namespace ChatworkJobTrigger
         {
             var value = iniData[section][key];
 
+            if (!iniData[section].ContainsKey(key))
+            {
+                return default(T);
+            }
+
             return (T)Convert.ChangeType(value, typeof(T));
         }
 
