@@ -6,7 +6,6 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Google.Apis.Sheets.v4" Version="1.57.0.2657" />
     <PackageReference Include="IniFileParserStandard" Version="1.0.1" />
     <PackageReference Include="jenkinsnet" Version="1.0.4" />
     <PackageReference Include="Kurukuru" Version="1.4.2" />
