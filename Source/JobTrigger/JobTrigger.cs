@@ -58,7 +58,12 @@ namespace ChatworkJobTrigger
 
             try
             {
-                if (arguments.FirstOrDefault().ToLower() == "help")
+                if (arguments.IsEmpty())
+                {
+                    throw new ArgumentException("Arguments is empty.");
+                }
+
+                if (arguments.ElementAtOrDefault(0, string.Empty).ToLower() == "help")
                 {
                     var helpMessage = string.Empty;
 
@@ -118,7 +123,7 @@ namespace ChatworkJobTrigger
 
                 if (requestMessage != null)
                 {
-                    var message = chatworkService.GetReplyStr(requestMessage) + "\n" + ex;
+                    var message = chatworkService.GetReplyStr(requestMessage) + ex;
 
                     await chatworkService.SendMessage(message, cancelToken);
                 }
