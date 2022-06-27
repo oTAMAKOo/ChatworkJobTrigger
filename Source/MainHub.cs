@@ -1,8 +1,11 @@
 ﻿
 using System;
 using System.Linq;
+using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Net.Security;
+using System.Security.Cryptography.X509Certificates;
 
 namespace ChatworkJobTrigger
 {
@@ -29,6 +32,10 @@ namespace ChatworkJobTrigger
             var setting = Setting.CreateInstance();
 
             await setting.Load();
+
+            // SSL.
+
+            ServicePointManager.ServerCertificateValidationCallback = OnRemoteCertificateValidationCallback;
 
             // ChatWork.
 
@@ -80,6 +87,12 @@ namespace ChatworkJobTrigger
                 
                 ConsoleUtility.Separator();
             }
+        }
+
+        // 信頼できないSSL証明書を「問題なし」にするメソッド
+        private bool OnRemoteCertificateValidationCallback(Object sender, X509Certificate certificate, X509Chain chain, SslPolicyErrors sslPolicyErrors)
+        {
+            return true; // 「SSL証明書の使用は問題なし」と示す
         }
     }
 }
