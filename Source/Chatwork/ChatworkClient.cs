@@ -38,6 +38,8 @@ namespace ChatworkJobTrigger
 
         //----- field -----
 
+        private HttpClient httpClient = null;
+
         //----- property -----
 
         public string RoomId { get; private set; }
@@ -50,15 +52,18 @@ namespace ChatworkJobTrigger
         {
             RoomId = roomId;
             ApiToken = apiToken;
+
+            httpClient = new HttpClient()
+            {
+                Timeout = TimeSpan.FromSeconds(30),
+            };
+
+            httpClient.DefaultRequestHeaders.Add("X-ChatWorkToken", ApiToken);
         }
 
         public async Task<string> GetMyAccount(CancellationToken cancelToken)
         {
-            var result = string.Empty;
-
-            var client = new HttpClient();
-
-            var request = new HttpRequestMessage
+            var requestMessage = new HttpRequestMessage
             {
                 Method = HttpMethod.Get,
                 RequestUri = GetRequestUri($"me", false),
@@ -68,39 +73,17 @@ namespace ChatworkJobTrigger
                     { "X-ChatWorkToken", ApiToken},
                 },
             };
-
-            try
-            {
-                using (var response = await client.SendAsync(request, cancelToken))
-                {
-                    if (response.IsSuccessStatusCode)
-                    {
-                        result = await response.Content.ReadAsStringAsync(cancelToken);
-                    }
-                    else
-                    {
-                        Console.WriteLine(response.ToString());
-                    }
-                }
-            }
-            catch (Exception e)
-            {
-                Console.WriteLine(e);
-                throw;
-            }
+            
+            var result = await SendAsync(requestMessage, cancelToken);
 
             return result;
         }
 
         public async Task<string> GetMessage(CancellationToken cancelToken, bool force = false)
         {
-            var result = string.Empty;
-
-            var client = new HttpClient();
-
             var forceFlag = force ? 1 : 0;
 
-            var request = new HttpRequestMessage
+            var requestMessage = new HttpRequestMessage
             {
                 Method = HttpMethod.Get,
                 RequestUri = GetRequestUri($"messages?force={forceFlag}"),
@@ -111,33 +94,13 @@ namespace ChatworkJobTrigger
                 },
             };
 
-            try
-            {
-                using (var response = await client.SendAsync(request, cancelToken))
-                {
-                    if (response.IsSuccessStatusCode)
-                    {
-                        result = await response.Content.ReadAsStringAsync(cancelToken);
-                    }
-                    else
-                    {
-                        Console.WriteLine(response.ToString());
-                    }
-                }
-            }
-            catch (Exception e)
-            {
-                Console.WriteLine(e);
-                throw;
-            }
+            var result = await SendAsync(requestMessage, cancelToken);
 
             return result;
         }
 
         public async Task<string> SendMessage(string message, CancellationToken cancelToken, bool selfUnRead = false)
         {
-            var result = string.Empty;
-
             var body = $"?body={ Uri.EscapeDataString(message)}&self_unread={(selfUnRead ? 1 : 0)}";
 
             var requestMessage = new HttpRequestMessage
@@ -151,20 +114,7 @@ namespace ChatworkJobTrigger
                 },
             };
 
-            using (var httpClient = new HttpClient())
-            {
-                using (var response = await httpClient.SendAsync(requestMessage, cancelToken))
-                {
-                    if (response.IsSuccessStatusCode)
-                    {
-                        result = await response.Content.ReadAsStringAsync(cancelToken);
-                    }
-                    else
-                    {
-                        Console.WriteLine(response.ToString());
-                    }
-                }
-            }
+            var result = await SendAsync(requestMessage, cancelToken);
 
             return result;
         }
@@ -180,43 +130,94 @@ namespace ChatworkJobTrigger
 
             var result = string.Empty;
 
-            using (var httpClient = new HttpClient())
+            using (var multipart = new MultipartFormDataContent("---boundary---"))
             {
-                httpClient.DefaultRequestHeaders.Add("X-ChatWorkToken", ApiToken);
+                // ファイル.
 
-                using (var multipart = new MultipartFormDataContent("---boundary---"))
+                var fileContent = new StreamContent(File.OpenRead(filePath));
+
+                fileContent.Headers.Add("Content-Disposition", $@"form-data; name=""file""; filename=""{displayName}""");
+
+                multipart.Add(fileContent);
+
+                // メッセージ.
+
+                if (!string.IsNullOrEmpty(message))
                 {
-                    // ファイル.
+                    var messageContent = new StreamContent(new MemoryStream(Encoding.UTF8.GetBytes(message)));
 
-                    var fileContent = new StreamContent(File.OpenRead(filePath));
+                    messageContent.Headers.Add("Content-Disposition", $@"form-data; name=""message""");
 
-                    fileContent.Headers.Add("Content-Disposition", $@"form-data; name=""file""; filename=""{displayName}""");
+                    multipart.Add(messageContent);
+                }
 
-                    multipart.Add(fileContent);
+                // 送信.
 
-                    // メッセージ.
+                var requestUrl = GetRequestUri("files");
 
-                    if (!string.IsNullOrEmpty(message))
+                result = await PostAsync(requestUrl, multipart, cancelToken);
+            }
+ 
+            return result;
+        }
+
+        private async Task<string> SendAsync(HttpRequestMessage requestMessage, CancellationToken cancelToken)
+        {
+            var result = string.Empty;
+
+            try
+            {
+                using (var response = await httpClient.SendAsync(requestMessage, cancelToken))
+                {
+                    if (response.IsSuccessStatusCode)
                     {
-                        var messageContent = new StreamContent(new MemoryStream(Encoding.UTF8.GetBytes(message)));
-
-                        messageContent.Headers.Add("Content-Disposition", $@"form-data; name=""message""");
-
-                        multipart.Add(messageContent);
+                        result = await response.Content.ReadAsStringAsync(cancelToken);
                     }
-
-                    // 送信.
-
-                    var requestUrl = GetRequestUri("files");
-
-                    using (var response = await httpClient.PostAsync(requestUrl, multipart, cancelToken))
+                    else
                     {
-                        if (response.IsSuccessStatusCode)
-                        {
-                            result = await response.Content.ReadAsStringAsync(cancelToken);
-                        }
+                        Console.WriteLine(response.ToString());
                     }
                 }
+            }
+            catch (TimeoutException e)
+            {
+                Console.WriteLine(e);
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e);
+                throw;
+            }
+
+            return result;
+        }
+
+        private async Task<string> PostAsync(Uri requestUrl, MultipartFormDataContent multipart, CancellationToken cancelToken)
+        {
+            var result = string.Empty;
+
+            try
+            {
+                using (var response = await httpClient.PostAsync(requestUrl, multipart, cancelToken))
+                {
+                    if (response.IsSuccessStatusCode)
+                    {
+                        result = await response.Content.ReadAsStringAsync(cancelToken);
+                    }
+                    else
+                    {
+                        Console.WriteLine(response.ToString());
+                    }
+                }
+            }
+            catch (TimeoutException e)
+            {
+                Console.WriteLine(e);
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e);
+                throw;
             }
 
             return result;
