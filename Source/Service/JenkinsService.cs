@@ -108,6 +108,9 @@ namespace ChatworkJobTrigger
 
             var runner = new JenkinsJobRunner(client);
 
+            runner.BuildTimeout = 120 * 60;  // 2hours.
+            runner.QueueTimeout =  120 * 60; // 2hours.
+
             runner.StatusChanged += () => 
             {
                 switch (runner.Status) 
