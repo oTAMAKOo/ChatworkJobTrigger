@@ -144,6 +144,20 @@ namespace ChatworkJobTrigger
 
             if (buildResult == null){ return null; }
 
+            if (buildResult.Number.HasValue)
+            {
+                var buildNumber =  buildResult.Number.Value.ToString();
+                
+                while (true)
+                {
+                    buildResult = await client.Builds.GetAsync<JenkinsBuildBase>(jobName, buildNumber);
+
+                    if (buildResult.Building == false) { break; }
+                    
+                    await Task.Delay(TimeSpan.FromSeconds(5));
+                }
+            }
+
             jobInfo.ResultInfo = buildResult;
 
             switch (buildResult.Result)
