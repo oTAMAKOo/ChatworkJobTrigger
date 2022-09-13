@@ -6,6 +6,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Net.Security;
 using System.Security.Cryptography.X509Certificates;
+using Extensions;
 
 namespace ChatworkJobTrigger
 {
@@ -75,7 +76,7 @@ namespace ChatworkJobTrigger
                     {
                         if(!jobTriggerService.IsTriggerMessage(message)){ continue; }
 
-                        await jobTriggerService.InvokeTrigger(message, cancelToken);
+                        jobTriggerService.InvokeTrigger(message, cancelToken).Forget();
                     }
                 }
             }
