@@ -147,42 +147,49 @@ namespace ChatworkJobTrigger
                 build = await runner.RunAsync(jobName);
             }
 
-            if (build == null){ return null; }
-
-            if (build.Number.HasValue)
+            if (build != null)
             {
-                var buildNumber =  build.Number.Value.ToString();
-                
-                while (true)
+                if (build.Number.HasValue)
                 {
-                    build = await client.Builds.GetAsync<JenkinsBuildBase>(jobName, buildNumber);
-
-                    if (build.Building == false) { break; }
+                    var buildNumber =  build.Number.Value.ToString();
                     
-                    await Task.Delay(TimeSpan.FromSeconds(5));
+                    while (true)
+                    {
+                        build = await client.Builds.GetAsync<JenkinsBuildBase>(jobName, buildNumber);
+
+                        if (build.Building == false) { break; }
+                        
+                        await Task.Delay(TimeSpan.FromSeconds(5));
+                    }
+                }
+
+                jobInfo.ResultInfo = build;
+
+                switch (build.Result)
+                {
+                    case "SUCCESS":
+                        jobInfo.Status = JobStatus.Success;
+                        spinner.Succeed(GetJobStatusText(jobName, jobArguments, JobStatus.Success, build.Number));
+                        break;
+                    case "FAILURE":
+                        jobInfo.Status = JobStatus.Failed;
+                        spinner.Fail(GetJobStatusText(jobName, jobArguments, JobStatus.Failed, build.Number));
+                        break;
+                    case "ABORTED":
+                        jobInfo.Status = JobStatus.Canceled;
+                        spinner.Fail(GetJobStatusText(jobName, jobArguments, JobStatus.Canceled));
+                        break;
+                    default:
+                        jobInfo.Status = JobStatus.Unknown;
+                        spinner.Stop($"Unknown state : [{build.Number}] {build.Result}.");
+                        break;
                 }
             }
-
-            jobInfo.ResultInfo = build;
-
-            switch (build.Result)
+            else
             {
-                case "SUCCESS":
-                    jobInfo.Status = JobStatus.Success;
-                    spinner.Succeed(GetJobStatusText(jobName, jobArguments, JobStatus.Success, build.Number));
-                    break;
-                case "FAILURE":
-                    jobInfo.Status = JobStatus.Failed;
-                    spinner.Fail(GetJobStatusText(jobName, jobArguments, JobStatus.Failed, build.Number));
-                    break;
-                case "ABORTED":
-                    jobInfo.Status = JobStatus.Canceled;
-                    spinner.Fail(GetJobStatusText(jobName, jobArguments, JobStatus.Canceled));
-                    break;
-                default:
-                    jobInfo.Status = JobStatus.Unknown;
-                    spinner.Stop($"Unknown state : [{build.Number}] {build.Result}.");
-                    break;
+                spinner.Fail(GetJobStatusText(jobName, jobArguments, JobStatus.Failed));
+
+                return null;
             }
 
             return jobInfo;

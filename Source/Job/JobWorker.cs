@@ -52,24 +52,60 @@ namespace ChatworkJobTrigger
                     throw new ArgumentException("Arguments is empty.");
                 }
 
-                if (command.CommandName.ToLower() == "cancel")
+                var firstArgumentStr = arguments.ElementAtOrDefault(0, string.Empty).ToLower();
+
+                switch (firstArgumentStr)
                 {
-                    await Cancel(cancelToken);
+                    case "help":
+                        await HelpReqest(command, cancelToken);
+                        break;
+
+                    default:
+                        await Build(command, arguments, cancelToken);
+                        break;
                 }
-                else
+            }
+            catch (Exception ex)
+            {
+                // エラー通知.
+
+                if (TriggerMessage != null)
                 {
-                    var firstArgumentStr = arguments.ElementAtOrDefault(0, string.Empty).ToLower();
+                    var message = chatworkService.GetReplyStr(TriggerMessage) + ex;
 
-                    switch (firstArgumentStr)
-                    {
-                        case "help":
-                            await HelpReqest(command, cancelToken);
-                            break;
+                    await chatworkService.SendMessage(message, cancelToken);
+                }
 
-                        default:
-                            await Build(command, arguments, cancelToken);
-                            break;
-                    }
+                // ログ出力.
+
+                ConsoleUtility.Separator();
+
+                Console.WriteLine(ex);
+                
+                ConsoleUtility.Separator();
+            }
+        }
+
+        public async Task Cancel(CancellationToken cancelToken)
+        {
+            var chatworkService = ChatworkService.Instance;
+            var jenkinsService = JenkinsService.Instance;
+
+            try
+            {
+                var result = await jenkinsService.ReqestCancel(JobName, QueuedNumber, BuildNumber);
+
+                // ビルド中の場合はビルド側でキャンセルメッセージが発行される.
+                if (result && !BuildNumber.HasValue)
+                {
+                    var textDefine = TextDefine.Instance;
+
+                    var resultMessage = string.Empty;
+
+                    resultMessage += chatworkService.GetReplyStr(TriggerMessage);
+                    resultMessage += textDefine.JobCanceled;
+
+                    await chatworkService.SendMessage(resultMessage, cancelToken);
                 }
             }
             catch (Exception ex)
@@ -148,27 +184,6 @@ namespace ChatworkJobTrigger
                 {
                     await chatworkService.SendFile(filePath, resultMessage, "log.txt", cancelToken);
                 }
-            }
-        }
-
-        public async Task Cancel(CancellationToken cancelToken)
-        {
-            var chatworkService = ChatworkService.Instance;
-            var jenkinsService = JenkinsService.Instance;
-
-            var result = await jenkinsService.ReqestCancel(JobName, QueuedNumber, BuildNumber);
-
-            // ビルド中の場合はビルド側でキャンセルメッセージが発行される.
-            if (result && !BuildNumber.HasValue)
-            {
-                var textDefine = TextDefine.Instance;
-
-                var resultMessage = string.Empty;
-
-                resultMessage += chatworkService.GetReplyStr(TriggerMessage);
-                resultMessage += textDefine.JobCanceled;
-
-                await chatworkService.SendMessage(resultMessage, cancelToken);
             }
         }
 

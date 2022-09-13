@@ -85,7 +85,7 @@ namespace ChatworkJobTrigger
         {
             var triggerInfo = GetJobTriggerInfo(message);
 
-            if (triggerInfo.Command == "cancel")
+            if (triggerInfo.Command.ToLower() == "cancel")
             {
                 await ExecuteCancel(triggerInfo, cancelToken);
             }
