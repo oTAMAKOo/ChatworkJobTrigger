@@ -58,13 +58,13 @@ namespace ChatworkJobTrigger
             parser.WriteFile(configFilePath, data, Encoding.UTF8);
         }
 
-        protected T GetData<T>(string section, string key)
+        protected T GetData<T>(string section, string key, T defaultValue = default)
         {
             var value = iniData[section][key];
 
             if (!iniData[section].ContainsKey(key))
             {
-                return default(T);
+                return defaultValue;
             }
 
             return (T)Convert.ChangeType(value, typeof(T));

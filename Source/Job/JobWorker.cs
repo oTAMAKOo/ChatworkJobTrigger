@@ -11,50 +11,39 @@ using ChatworkJobTrigger.Chatwork;
 
 namespace ChatworkJobTrigger
 {
-    public sealed class JobTrigger : Singleton<JobTrigger>
+    public sealed class JobWorker
     {
         //----- params -----
 
         //----- field -----
         
-        private MessageData requestMessage = null;
-
         //----- property -----
 
-        public Command[] Commands { get; private set; }
+        public string Token { get; private set; }
+
+        public string JobName { get; private set; }
+
+        public Dictionary<string, string> JobParameters { get; private set; }
+
+        public int? QueuedNumber { get; private set; }
+
+        public int? BuildNumber { get; private set; }
+
+        public JenkinsJobStatus Status { get; private set; }
+
+        public MessageData TriggerMessage { get; private set; }
 
         //----- method -----
 
-        public async Task Initialize()
+        public JobWorker(string token, MessageData triggerMessage)
         {
-            var setting = Setting.Instance;
-            var commandFileLoader = CommandFileLoader.Instance;
-
-            var commandList = new List<Command>();
-
-            var commandNames = setting.Commands.Split(',').Select(x => x.Trim()).ToArray();
-
-            foreach (var commandName in commandNames)
-            {
-                var command = await commandFileLoader.Load(commandName);
-
-                commandList.Add(command);
-            }
-
-            Commands = commandList.ToArray();
-        }
-
-        public void SetRequestMessageData(MessageData requestMessage)
-        {
-            this.requestMessage = requestMessage;
+            Token = token;
+            TriggerMessage = triggerMessage;
         }
 
         public async Task Invoke(Command command, string[] arguments, CancellationToken cancelToken)
         {
             var chatworkService = ChatworkService.Instance;
-            var jenkinsService = JenkinsService.Instance;
-
-            JobInfo jobInfo = null;
 
             try
             {
@@ -63,57 +52,23 @@ namespace ChatworkJobTrigger
                     throw new ArgumentException("Arguments is empty.");
                 }
 
-                if (arguments.ElementAtOrDefault(0, string.Empty).ToLower() == "help")
+                if (command.CommandName.ToLower() == "cancel")
                 {
-                    var helpMessage = string.Empty;
-
-                    helpMessage += chatworkService.GetReplyStr(requestMessage);
-                    helpMessage += command.GetHelpText();
-
-                    await chatworkService.SendMessage(helpMessage, cancelToken);
+                    await Cancel(cancelToken);
                 }
                 else
                 {
-                    var jobData = await BuildJobData(command, arguments, cancelToken);
+                    var firstArgumentStr = arguments.ElementAtOrDefault(0, string.Empty).ToLower();
 
-                    if (jobData == null){ return; }
-
-                    jobInfo = await jenkinsService.RunJenkinsJob(jobData.Item1, jobData.Item2, OnJobStatusChanged);
-
-                    if (jobInfo != null)
+                    switch (firstArgumentStr)
                     {
-                        var resultMessage = string.Empty;
+                        case "help":
+                            await HelpReqest(command, cancelToken);
+                            break;
 
-                        resultMessage += chatworkService.GetReplyStr(requestMessage);
-                        resultMessage += jenkinsService.GetJobResultMessage(jobInfo);
-
-                        // ジョブ失敗時にはジョブのログファイルを送る.
-
-                        var filePath = string.Empty;
-
-                        if (jobInfo.Status == JobStatus.Failed)
-                        {
-                            if (jobInfo.ResultInfo != null && jobInfo.ResultInfo.Number.HasValue)
-                            {
-                                var buildNumber = jobInfo.ResultInfo.Number.Value;
-                                
-                                filePath = jenkinsService.GetLogFilePath(jobInfo.JobName, buildNumber);
-
-                                if (!File.Exists(filePath))
-                                {
-                                    filePath = null;
-                                }
-                            }
-                        }
-
-                        if (string.IsNullOrEmpty(filePath))
-                        {
-                            await chatworkService.SendMessage(resultMessage, cancelToken);
-                        }
-                        else
-                        {
-                            await chatworkService.SendFile(filePath, resultMessage, "log.txt", cancelToken);
-                        }
+                        default:
+                            await Build(command, arguments, cancelToken);
+                            break;
                     }
                 }
             }
@@ -121,9 +76,9 @@ namespace ChatworkJobTrigger
             {
                 // エラー通知.
 
-                if (requestMessage != null)
+                if (TriggerMessage != null)
                 {
-                    var message = chatworkService.GetReplyStr(requestMessage) + ex;
+                    var message = chatworkService.GetReplyStr(TriggerMessage) + ex;
 
                     await chatworkService.SendMessage(message, cancelToken);
                 }
@@ -138,30 +93,109 @@ namespace ChatworkJobTrigger
             }
         }
 
-        private async Task<Tuple<string, Dictionary<string, string>>> BuildJobData(Command command, string[] arguments, CancellationToken cancelToken)
+        private async Task HelpReqest(Command command, CancellationToken cancelToken)
         {
             var chatworkService = ChatworkService.Instance;
 
-            var jobName = string.Empty;
-            var jobParameters = new Dictionary<string, string>();
+            var helpMessage = string.Empty;
+
+            helpMessage += chatworkService.GetReplyStr(TriggerMessage);
+            helpMessage += command.GetHelpText();
+
+            await chatworkService.SendMessage(helpMessage, cancelToken);
+        }
+
+        private async Task Build(Command command, string[] arguments, CancellationToken cancelToken)
+        {
+            var chatworkService = ChatworkService.Instance;
+            var jenkinsService = JenkinsService.Instance;
+            
+            await BuildJobData(command, arguments, cancelToken);
+
+            var result = await jenkinsService.ReqestBuild(JobName, JobParameters, OnJobStatusChanged);
+
+            if (result != null)
+            {
+                var resultMessage = string.Empty;
+
+                resultMessage += chatworkService.GetReplyStr(TriggerMessage);
+                resultMessage += jenkinsService.GetJobResultMessage(result);
+
+                // ジョブ失敗時にはジョブのログファイルを送る.
+
+                var filePath = string.Empty;
+
+                if (result.Status == JobStatus.Failed)
+                {
+                    if (result.ResultInfo != null && result.ResultInfo.Number.HasValue)
+                    {
+                        var buildNumber = result.ResultInfo.Number.Value;
+                                
+                        filePath = jenkinsService.GetLogFilePath(result.JobName, buildNumber);
+
+                        if (!File.Exists(filePath))
+                        {
+                            filePath = null;
+                        }
+                    }
+                }
+
+                if (string.IsNullOrEmpty(filePath))
+                {
+                    await chatworkService.SendMessage(resultMessage, cancelToken);
+                }
+                else
+                {
+                    await chatworkService.SendFile(filePath, resultMessage, "log.txt", cancelToken);
+                }
+            }
+        }
+
+        public async Task Cancel(CancellationToken cancelToken)
+        {
+            var chatworkService = ChatworkService.Instance;
+            var jenkinsService = JenkinsService.Instance;
+
+            var result = await jenkinsService.ReqestCancel(JobName, QueuedNumber, BuildNumber);
+
+            // ビルド中の場合はビルド側でキャンセルメッセージが発行される.
+            if (result && !BuildNumber.HasValue)
+            {
+                var textDefine = TextDefine.Instance;
+
+                var resultMessage = string.Empty;
+
+                resultMessage += chatworkService.GetReplyStr(TriggerMessage);
+                resultMessage += textDefine.JobCanceled;
+
+                await chatworkService.SendMessage(resultMessage, cancelToken);
+            }
+        }
+
+        private async Task BuildJobData(Command command, string[] arguments, CancellationToken cancelToken)
+        {
+            var chatworkService = ChatworkService.Instance;
+
+            JobName = string.Empty;
+            JobParameters = new Dictionary<string, string>();
 
             try
             {
-                jobParameters = GetJobParameters(command, arguments);
+                JobParameters = GetJobParameters(command, arguments);
 
-                ValidateJobParameters(command, jobParameters);
+                ValidateJobParameters(command, JobParameters);
 
-                jobName = GetJobName(command, jobParameters);
+                JobName = GetJobName(command, JobParameters);
             }
             catch (Exception ex)
             {
                 // コマンドが間違っている通知.
 
-                if (requestMessage != null)
+                if (TriggerMessage != null)
                 {
                     var textDefine = TextDefine.Instance;
 
-                    var message = chatworkService.GetReplyStr(requestMessage);
+                    var message = chatworkService.GetReplyStr(TriggerMessage);
                     
                     if (!string.IsNullOrEmpty(textDefine.CommandError))
                     {
@@ -172,11 +206,7 @@ namespace ChatworkJobTrigger
 
                     await chatworkService.SendMessage(message, cancelToken);
                 }
-
-                return null;
             }
-
-            return Tuple.Create(jobName, jobParameters);
         }
 
         private void ValidateJobParameters(Command command, Dictionary<string, string> jobParameters)
@@ -305,28 +335,37 @@ namespace ChatworkJobTrigger
             return value;
         }
 
-        private void OnJobStatusChanged(JenkinsJobStatus jobStatus)
+        private void OnJobStatusChanged(JenkinsJobStatus jobStatus, int? queuedNumber, int? buildNumber)
         {
+            Status = jobStatus;
+            
+            if (TriggerMessage == null){ return; }
+         
             var chatworkService = ChatworkService.Instance;
+            var workerManager = WorkerManager.Instance;
 
-            if (requestMessage != null)
+            var textDefine = TextDefine.Instance;
+
+            var message = string.Empty;
+
+            var replyStr = chatworkService.GetReplyStr(TriggerMessage);
+
+            QueuedNumber = queuedNumber;
+            BuildNumber = buildNumber;
+
+            switch (jobStatus)
             {
-                var textDefine = TextDefine.Instance;
-
-                var message = string.Empty;
-
-                switch (jobStatus)
-                {
-                    case JenkinsJobStatus.Queued:
-                        message = chatworkService.GetReplyStr(requestMessage) + textDefine.JobQueued;
-                        break;
-                }
-
-                if (!string.IsNullOrEmpty(message))
-                {
-                    chatworkService.SendMessage(message, CancellationToken.None).Forget();
-                }
+                case JenkinsJobStatus.Queued:
+                    message = replyStr + string.Format(textDefine.JobQueued, Token);
+                    break;
             }
+
+            if (!string.IsNullOrEmpty(message))
+            {
+                chatworkService.SendMessage(message, CancellationToken.None).Forget();
+            }
+
+            workerManager.Update();
         }
     }
 }

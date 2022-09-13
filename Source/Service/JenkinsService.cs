@@ -2,6 +2,9 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net.Http;
+using System.Net.Http.Headers;
+using System.Text;
 using System.Threading.Tasks;
 using JenkinsNET;
 using JenkinsNET.Models;
@@ -24,7 +27,7 @@ namespace ChatworkJobTrigger
         Unknown,
     }
 
-    public sealed class JobInfo
+    public sealed class JobResult
     {
         public string JobName { get; set; }
 
@@ -84,9 +87,11 @@ namespace ChatworkJobTrigger
             return text;
         }
 
-        public async Task<JobInfo> RunJenkinsJob(string jobName, IDictionary<string, string> jobParameters, Action<JenkinsJobStatus> onJobStatusChanged)
+        public async Task<JobResult> ReqestBuild(string jobName, IDictionary<string, string> jobParameters, Action<JenkinsJobStatus, int?, int?> onJobStatusChanged)
         {
-            var jobInfo = new JobInfo()
+            var setting = Setting.Instance;
+
+            var jobInfo = new JobResult()
             {
                 JobName = jobName,
                 Parameters = jobParameters,
@@ -108,8 +113,8 @@ namespace ChatworkJobTrigger
 
             var runner = new JenkinsJobRunner(client);
 
-            runner.BuildTimeout = 120 * 60;  // 2hours.
-            runner.QueueTimeout =  120 * 60; // 2hours.
+            runner.BuildTimeout = setting.JenkinsBuildTimeout;
+            runner.QueueTimeout =  setting.JenkinsQueueTimeout;
 
             runner.StatusChanged += () => 
             {
@@ -127,48 +132,48 @@ namespace ChatworkJobTrigger
 
                 if (onJobStatusChanged != null)
                 {
-                    onJobStatusChanged.Invoke(runner.Status);
+                    onJobStatusChanged.Invoke(runner.Status, runner.QueueItemNumber, runner.BuildNumber);
                 }
             };
 
-            JenkinsBuildBase buildResult = null;
+            JenkinsBuildBase build = null;
             
             if(jobParameters != null && jobParameters.Any())
             {
-                buildResult = await runner.RunWithParametersAsync(jobName, jobParameters);
+                build = await runner.RunWithParametersAsync(jobName, jobParameters);
             }
             else
             {
-                buildResult = await runner.RunAsync(jobName);
+                build = await runner.RunAsync(jobName);
             }
 
-            if (buildResult == null){ return null; }
+            if (build == null){ return null; }
 
-            if (buildResult.Number.HasValue)
+            if (build.Number.HasValue)
             {
-                var buildNumber =  buildResult.Number.Value.ToString();
+                var buildNumber =  build.Number.Value.ToString();
                 
                 while (true)
                 {
-                    buildResult = await client.Builds.GetAsync<JenkinsBuildBase>(jobName, buildNumber);
+                    build = await client.Builds.GetAsync<JenkinsBuildBase>(jobName, buildNumber);
 
-                    if (buildResult.Building == false) { break; }
+                    if (build.Building == false) { break; }
                     
                     await Task.Delay(TimeSpan.FromSeconds(5));
                 }
             }
 
-            jobInfo.ResultInfo = buildResult;
+            jobInfo.ResultInfo = build;
 
-            switch (buildResult.Result)
+            switch (build.Result)
             {
                 case "SUCCESS":
                     jobInfo.Status = JobStatus.Success;
-                    spinner.Succeed(GetJobStatusText(jobName, jobArguments, JobStatus.Success, buildResult.Number));
+                    spinner.Succeed(GetJobStatusText(jobName, jobArguments, JobStatus.Success, build.Number));
                     break;
                 case "FAILURE":
                     jobInfo.Status = JobStatus.Failed;
-                    spinner.Fail(GetJobStatusText(jobName, jobArguments, JobStatus.Failed, buildResult.Number));
+                    spinner.Fail(GetJobStatusText(jobName, jobArguments, JobStatus.Failed, build.Number));
                     break;
                 case "ABORTED":
                     jobInfo.Status = JobStatus.Canceled;
@@ -176,20 +181,62 @@ namespace ChatworkJobTrigger
                     break;
                 default:
                     jobInfo.Status = JobStatus.Unknown;
-                    spinner.Stop($"Unknown state : [{buildResult.Number}] {buildResult.Result}.");
+                    spinner.Stop($"Unknown state : [{build.Number}] {build.Result}.");
                     break;
             }
 
             return jobInfo;
         }
 
-        public string GetJobResultMessage(JobInfo jobInfo)
+        public async Task<bool> ReqestCancel(string jobName, int? queuedNumber, int? buildNumber)
+        {
+            var setting = Setting.Instance;
+
+            var result = false;
+            
+            var url = string.Empty;
+
+            if(buildNumber.HasValue)
+            {
+                url = setting.JenkinsBaseUrl + $"job/{jobName}/{buildNumber.Value}/stop";
+            }
+            else if (queuedNumber.HasValue)
+            {
+                url = setting.JenkinsBaseUrl + $"queue/cancelItem?id={queuedNumber.Value}";
+            }
+
+            if (!string.IsNullOrEmpty(url))
+            {
+                using (var httpClient = new HttpClient())
+                {
+                    var request = new HttpRequestMessage(HttpMethod.Post, url);
+                    
+                    // Basic認証.
+
+                    var authToken = Encoding.ASCII.GetBytes($"{client.UserName}:{client.ApiToken}");
+
+                    httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Basic", Convert.ToBase64String(authToken));
+
+                    // 送信.
+                    var response = await httpClient.SendAsync(request);
+                    
+                    if (response != null)
+                    {
+                        result = response.IsSuccessStatusCode;
+                    }
+                }
+            }
+
+            return result;
+        }
+
+        public string GetJobResultMessage(JobResult result)
         {
             var textDefine = TextDefine.Instance;
 
             var message = string.Empty;
 
-            switch (jobInfo.Status)
+            switch (result.Status)
             {
                 case JobStatus.Success:
                     message += textDefine.JobSuccess;
@@ -202,9 +249,9 @@ namespace ChatworkJobTrigger
                     break;
             }
 
-            if (jobInfo.ResultInfo != null)
+            if (result.ResultInfo != null)
             {
-                var buildNumber = jobInfo.ResultInfo.Number;
+                var buildNumber = result.ResultInfo.Number;
 
                 message = message.Replace("#BUILD_NUMBER#", buildNumber.ToString());
             }

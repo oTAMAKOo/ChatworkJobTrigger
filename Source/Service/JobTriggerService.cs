@@ -1,5 +1,6 @@
 ﻿
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -31,6 +32,8 @@ namespace ChatworkJobTrigger
         
         //----- field -----
 
+        private Command[] commands = null;
+
         //----- property -----
 
         //----- method -----
@@ -39,9 +42,23 @@ namespace ChatworkJobTrigger
 
         public async Task Initialize()
         {
-            var jobTrigger = JobTrigger.Instance;
+            var setting = Setting.Instance;
 
-            await jobTrigger.Initialize();
+            // 実行コマンド情報構築.
+            var commandFileLoader = CommandFileLoader.Instance;
+
+            var commandList = new List<Command>();
+
+            var commandNames = setting.Commands.Split(',').Select(x => x.Trim()).ToArray();
+
+            foreach (var commandName in commandNames)
+            {
+                var command = await commandFileLoader.Load(commandName);
+
+                commandList.Add(command);
+            }
+
+            commands = commandList.ToArray();
         }
 
         public bool IsTriggerMessage(MessageData messageData)
@@ -66,17 +83,46 @@ namespace ChatworkJobTrigger
 
         public async Task InvokeTrigger(MessageData message, CancellationToken cancelToken)
         {
-            var jobTrigger = JobTrigger.Instance;
-
             var triggerInfo = GetJobTriggerInfo(message);
 
-            foreach (var command in jobTrigger.Commands)
+            if (triggerInfo.Command == "cancel")
             {
-                if(command.CommandName != triggerInfo.Command){ continue; }
+                await ExecuteCancel(triggerInfo, cancelToken);
+            }
+            else
+            {
+                var command = commands.FirstOrDefault(x => x.CommandName == triggerInfo.Command);
+                
+                await ExecuteCommand(command, triggerInfo, message, cancelToken);
+            }
+        }
 
-                jobTrigger.SetRequestMessageData(message);
+        private async Task ExecuteCommand(Command command, JobTriggerInfo triggerInfo, MessageData message, CancellationToken cancelToken)
+        {
+            var workerManager = WorkerManager.Instance;
 
-                await jobTrigger.Invoke(command, triggerInfo.Arguments, cancelToken);
+            workerManager.Update();
+
+            if (command == null){ return; }
+
+            var jobWorker = workerManager.CreateNewWorker(message);
+            
+            await jobWorker.Invoke(command, triggerInfo.Arguments, cancelToken);
+        }
+
+        private async Task ExecuteCancel(JobTriggerInfo triggerInfo, CancellationToken cancelToken)
+        {
+            var token = triggerInfo.Arguments.ElementAtOrDefault(0);
+
+            if (string.IsNullOrEmpty(token)){ return; }
+            
+            var workerManager = WorkerManager.Instance;
+
+            var jobWorker = workerManager.FindWorker(token);
+            
+            if (jobWorker != null)
+            {
+                await jobWorker.Cancel(cancelToken);
             }
         }
 

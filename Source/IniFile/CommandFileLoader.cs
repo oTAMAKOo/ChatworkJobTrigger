@@ -1,5 +1,6 @@
 ﻿
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using Extensions;
 using IniFileParser.Model;
@@ -40,7 +41,12 @@ namespace ChatworkJobTrigger
 
             await Load();
 
-            var jobNameFormat = iniData[JobSection][JobNameFormatKeyName];
+            var jobNameFormat = string.Empty;
+            
+            if(iniData.Sections.Any(x => x.SectionName == JobSection))
+            {
+                jobNameFormat = iniData[JobSection][JobNameFormatKeyName];
+            }
 
             var arguments = new List<CommandArgument>();
 
