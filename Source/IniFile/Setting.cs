@@ -25,7 +25,6 @@ namespace ChatworkJobTrigger
         private const string CommandSection = "Command";
 
         private const string CommandDefineField = "Define";
-        private const string CommandCancelField = "Cancel";
 
         //----- field -----
         
@@ -45,7 +44,6 @@ namespace ChatworkJobTrigger
         public int JenkinsQueueTimeout { get { return GetData<int>(JenkinsSection, JenkinsQueueTimeoutField, 10000); } }
 
         public string Commands { get { return GetData<string>(CommandSection, CommandDefineField); } }
-        public string CancelCommand { get { return GetData<string>(CommandSection, CommandCancelField); } }
         
         //----- method -----
 
@@ -63,7 +61,6 @@ namespace ChatworkJobTrigger
             data[JenkinsSection][JenkinsQueueTimeoutField] = "10000";
 
             data[CommandSection][CommandDefineField] = "build, master";
-            data[CommandSection][CommandCancelField] = "cancel";
         }
     }
 }

@@ -62,7 +62,11 @@ namespace ChatworkJobTrigger
                     type = typeof(bool);
                     break;
                 default:
-                    throw new ArgumentException(string.Format(textDefine.UndefinedTypeError, typeName));
+                    {
+                        var errorMessage = textDefine.UndefinedTypeError.Replace("#TYPE_NAME#", typeName);
+
+                        throw new ArgumentException(errorMessage);
+                    }
             }
 
             return type;

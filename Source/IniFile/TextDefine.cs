@@ -41,15 +41,15 @@ namespace ChatworkJobTrigger
 
         protected override void SetDefaultData(ref IniData data)
         {
-            data[JobSection][JobQueuedField] = "Job Queued!";
+            data[JobSection][JobQueuedField] = "Job Queued! #BUILD_TOKEN#";
             data[JobSection][JobSuccessField] = "JobSuccess! [#BUILD_NUMBER#]";
             data[JobSection][JobFailedField] = "JobFailed... [#BUILD_NUMBER#]";
             data[JobSection][JobCanceledField] = "JobCanceled. [#BUILD_NUMBER#]";
 
             data[ErrorSection][CommandErrorField] = "Request command error.";
-            data[ErrorSection][ArgumentNotFoundErrorField] = "Argument {0} is required.";
-            data[ErrorSection][UndefinedValueErrorField] = "Undefined value {0}.";
-            data[ErrorSection][UndefinedTypeErrorField] = "Undefined type {0} is defined.";
+            data[ErrorSection][ArgumentNotFoundErrorField] = "Argument #FIELD_NAME# is required.";
+            data[ErrorSection][UndefinedValueErrorField] = "Undefined value #VALUE#.";
+            data[ErrorSection][UndefinedTypeErrorField] = "Undefined type #TYPE_NAME# is defined.";
         }
     }
 }

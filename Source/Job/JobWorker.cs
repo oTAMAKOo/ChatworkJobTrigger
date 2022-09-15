@@ -236,7 +236,9 @@ namespace ChatworkJobTrigger
 
                     if (!jobParameters.ContainsKey(argument.Field))
                     {
-                        throw new ArgumentException(string.Format(textDefine.ArgumentNotFoundError, argument.Field));
+                        var errorMessage = textDefine.ArgumentNotFoundError.Replace("#FIELD_NAME#", argument.Field);
+
+                        throw new ArgumentException(errorMessage);
                     }
 
                     // 候補一覧に値が存在しない.
@@ -248,7 +250,9 @@ namespace ChatworkJobTrigger
 
                         if (string.IsNullOrEmpty(valueStr))
                         {
-                            throw new ArgumentException(string.Format(textDefine.UndefinedValueError, value));
+                            var errorMessage = textDefine.UndefinedValueError.Replace("#VALUE#", value);
+
+                            throw new ArgumentException(errorMessage);
                         }
                     }
                 }
@@ -371,7 +375,7 @@ namespace ChatworkJobTrigger
             switch (jobStatus)
             {
                 case JenkinsJobStatus.Queued:
-                    message = replyStr + string.Format(textDefine.JobQueued, Token);
+                    message = replyStr + textDefine.JobQueued.Replace("#BUILD_TOKEN#", Token);
                     break;
             }
 
