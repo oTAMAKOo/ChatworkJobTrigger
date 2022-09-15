@@ -85,15 +85,25 @@ namespace ChatworkJobTrigger
         {
             var triggerInfo = GetJobTriggerInfo(message);
 
-            if (triggerInfo.Command.ToLower() == "cancel")
+            var commandName = triggerInfo.Command.ToLower();
+
+            switch (commandName)
             {
-                await ExecuteCancel(triggerInfo, cancelToken);
-            }
-            else
-            {
-                var command = commands.FirstOrDefault(x => x.CommandName == triggerInfo.Command);
-                
-                await ExecuteCommand(command, triggerInfo, message, cancelToken);
+                case "cancel":
+                    await ExecuteCancel(triggerInfo, cancelToken);
+                    break;
+
+                case "status":
+                    await ExecuteGetStatus(triggerInfo, cancelToken);
+                    break;
+
+                default:
+                    {
+                        var command = commands.FirstOrDefault(x => x.CommandName.ToLower() == commandName);
+
+                        await ExecuteCommand(command, triggerInfo, message, cancelToken);
+                    }
+                    break;
             }
         }
 
@@ -123,6 +133,22 @@ namespace ChatworkJobTrigger
             if (jobWorker != null)
             {
                 await jobWorker.Cancel(cancelToken);
+            }
+        }
+
+        private async Task ExecuteGetStatus(JobTriggerInfo triggerInfo, CancellationToken cancelToken)
+        {
+            var token = triggerInfo.Arguments.ElementAtOrDefault(0);
+
+            if (string.IsNullOrEmpty(token)){ return; }
+            
+            var workerManager = WorkerManager.Instance;
+
+            var jobWorker = workerManager.FindWorker(token);
+            
+            if (jobWorker != null)
+            {
+                await jobWorker.GetStatus(cancelToken);
             }
         }
 

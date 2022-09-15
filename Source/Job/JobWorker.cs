@@ -129,6 +129,15 @@ namespace ChatworkJobTrigger
             }
         }
 
+        public async Task GetStatus(CancellationToken cancelToken)
+        {
+            var chatworkService = ChatworkService.Instance;
+            
+            var message = chatworkService.GetReplyStr(TriggerMessage) + Status;
+
+            await chatworkService.SendMessage(message, cancelToken);
+        }
+
         private async Task HelpReqest(Command command, CancellationToken cancelToken)
         {
             var chatworkService = ChatworkService.Instance;

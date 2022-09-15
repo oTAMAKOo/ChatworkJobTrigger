@@ -111,11 +111,12 @@ namespace ChatworkJobTrigger
 
             spinner.Start();
 
-            var runner = new JenkinsJobRunner(client);
-
-            runner.BuildTimeout = setting.JenkinsBuildTimeout;
-            runner.QueueTimeout =  setting.JenkinsQueueTimeout;
-
+            var runner = new JenkinsJobRunner(client)
+            {
+                BuildTimeout = setting.JenkinsBuildTimeout,
+                QueueTimeout = setting.JenkinsQueueTimeout,
+            };
+            
             runner.StatusChanged += () => 
             {
                 switch (runner.Status) 
