@@ -40,8 +40,8 @@ namespace ChatworkJobTrigger
         public string JenkinsApiToken { get { return GetData<string>(JenkinsSection, JenkinsApiTokenField); } }
         public string JenkinsLogFilePath { get { return GetData<string>(JenkinsSection, JenkinsLogFilePathField); } }
         
-        public int JenkinsBuildTimeout { get { return GetData<int>(JenkinsSection, JenkinsBuildTimeoutField, 2000); } }
-        public int JenkinsQueueTimeout { get { return GetData<int>(JenkinsSection, JenkinsQueueTimeoutField, 10000); } }
+        public int JenkinsBuildTimeout { get { return GetData<int>(JenkinsSection, JenkinsBuildTimeoutField, 3600); } }
+        public int JenkinsQueueTimeout { get { return GetData<int>(JenkinsSection, JenkinsQueueTimeoutField, 3600 * 2); } }
 
         public string Commands { get { return GetData<string>(CommandSection, CommandDefineField); } }
         
@@ -57,8 +57,8 @@ namespace ChatworkJobTrigger
             data[JenkinsSection][JenkinsApiTokenField] = "ABCDEFG123456789";
             data[JenkinsSection][JenkinsLogFilePathField] = "/Users/<UserName>/.jenkins/jobs/#JOB_NAME#/builds/#BUILD_NUMBER#/log";
 
-            data[JenkinsSection][JenkinsBuildTimeoutField] = "2000";
-            data[JenkinsSection][JenkinsQueueTimeoutField] = "10000";
+            data[JenkinsSection][JenkinsBuildTimeoutField] = "3600";
+            data[JenkinsSection][JenkinsQueueTimeoutField] = "7200";
 
             data[CommandSection][CommandDefineField] = "build, master";
         }
