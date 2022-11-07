@@ -9,7 +9,6 @@ using System.Threading.Tasks;
 using JenkinsNET;
 using JenkinsNET.Models;
 using JenkinsNET.Utilities;
-using Kurukuru;
 using Extensions;
 
 namespace ChatworkJobTrigger
@@ -98,19 +97,6 @@ namespace ChatworkJobTrigger
                 Status = JobStatus.Starting,
             };
 
-            var jobArguments = string.Empty;
-
-            if (jobParameters != null && jobParameters.Any())
-            {
-                var items = jobParameters.Select(x => x.ToString());
-
-                jobArguments = string.Join(", ", items);
-            }
-
-            var spinner = new Spinner(GetJobStatusText(jobName, jobArguments, JobStatus.Starting), Patterns.Dots, ConsoleColor.Cyan);
-
-            spinner.Start();
-
             var runner = new JenkinsJobRunner(client)
             {
                 BuildTimeout = setting.JenkinsBuildTimeout,
@@ -123,11 +109,9 @@ namespace ChatworkJobTrigger
                 {
                     case JenkinsJobStatus.Queued:
                         jobInfo.Status = JobStatus.Queued;
-                        spinner.Text = GetJobStatusText(jobName, jobArguments, JobStatus.Queued);
                         break;
                     case JenkinsJobStatus.Building:
                         jobInfo.Status = JobStatus.Running;
-                        spinner.Text = GetJobStatusText(jobName, jobArguments, JobStatus.Running);
                         break;
                 }
 
@@ -170,26 +154,20 @@ namespace ChatworkJobTrigger
                 {
                     case "SUCCESS":
                         jobInfo.Status = JobStatus.Success;
-                        spinner.Succeed(GetJobStatusText(jobName, jobArguments, JobStatus.Success, build.Number));
                         break;
                     case "FAILURE":
                         jobInfo.Status = JobStatus.Failed;
-                        spinner.Fail(GetJobStatusText(jobName, jobArguments, JobStatus.Failed, build.Number));
                         break;
                     case "ABORTED":
                         jobInfo.Status = JobStatus.Canceled;
-                        spinner.Fail(GetJobStatusText(jobName, jobArguments, JobStatus.Canceled));
                         break;
                     default:
                         jobInfo.Status = JobStatus.Unknown;
-                        spinner.Stop($"Unknown state : [{build.Number}] {build.Result}.");
                         break;
                 }
             }
             else
             {
-                spinner.Fail(GetJobStatusText(jobName, jobArguments, JobStatus.Failed));
-
                 return null;
             }
 
