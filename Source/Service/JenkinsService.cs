@@ -9,6 +9,7 @@ using System.Threading.Tasks;
 using JenkinsNET;
 using JenkinsNET.Models;
 using JenkinsNET.Utilities;
+using JenkinsNET.Exceptions;
 using Extensions;
 
 namespace ChatworkJobTrigger
@@ -140,11 +141,18 @@ namespace ChatworkJobTrigger
                     
                     while (true)
                     {
-                        build = await client.Builds.GetAsync<JenkinsBuildBase>(jobName, buildNumber);
+                        try
+                        {
+                            build = await client.Builds.GetAsync<JenkinsBuildBase>(jobName, buildNumber);
 
-                        if (build.Building == false) { break; }
+                            if (build.Building == false) { break; }
                         
-                        await Task.Delay(TimeSpan.FromSeconds(5));
+                            await Task.Delay(TimeSpan.FromSeconds(5));
+                        }
+                        catch (JenkinsJobGetBuildException e)
+                        {
+                            /* このエラーは無視 */
+                        }
                     }
                 }
 

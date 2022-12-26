@@ -159,10 +159,10 @@ namespace ChatworkJobTrigger
 
             var result = await jenkinsService.ReqestBuild(JobName, JobParameters, OnJobStatusChanged);
 
+            var resultMessage = string.Empty;
+
             if (result != null)
             {
-                var resultMessage = string.Empty;
-
                 resultMessage += chatworkService.GetReplyStr(TriggerMessage);
                 resultMessage += jenkinsService.GetJobResultMessage(result);
 
@@ -193,6 +193,13 @@ namespace ChatworkJobTrigger
                 {
                     await chatworkService.SendFile(filePath, resultMessage, "log.txt", cancelToken);
                 }
+            }
+            else
+            {
+                resultMessage += chatworkService.GetReplyStr(TriggerMessage);
+                resultMessage += "Jenkins job info get failed.";
+
+                await chatworkService.SendMessage(resultMessage, cancelToken);
             }
         }
 
