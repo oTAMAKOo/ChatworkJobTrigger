@@ -9,7 +9,6 @@ using System.Threading.Tasks;
 using JenkinsNET;
 using JenkinsNET.Models;
 using JenkinsNET.Utilities;
-using JenkinsNET.Exceptions;
 using Extensions;
 
 namespace ChatworkJobTrigger
@@ -123,44 +122,14 @@ namespace ChatworkJobTrigger
             };
 
             JenkinsBuildBase build = null;
-
-            try
+            
+            if(jobParameters != null && jobParameters.Any())
             {
-                if(jobParameters != null && jobParameters.Any())
-                {
-                    build = await runner.RunWithParametersAsync(jobName, jobParameters);
-                }
-                else
-                {
-                    build = await runner.RunAsync(jobName);
-                }
+                build = await runner.RunWithParametersAsync(jobName, jobParameters);
             }
-            catch (JenkinsJobGetBuildException)
+            else
             {
-                const int OnErrorRetryCount = 5;
-
-                var retryCount = 0;
-
-                while (true)
-                {
-                    if(runner.BuildNumber.HasValue)
-                    {
-                        try
-                        {
-                            build = await client.Builds.GetAsync<JenkinsBuildBase>(jobName, runner.BuildNumber.Value.ToString());
-                        }
-                        catch (JenkinsJobGetBuildException)
-                        {
-                            retryCount++;
-                        }
-                    }
-
-                    if (build != null){ break; }
-
-                    if (OnErrorRetryCount < retryCount){ throw; }
-                    
-                    await Task.Delay(TimeSpan.FromSeconds(5));
-                }
+                build = await runner.RunAsync(jobName);
             }
 
             if (build != null)
@@ -171,18 +140,11 @@ namespace ChatworkJobTrigger
                     
                     while (true)
                     {
-                        try
-                        {
-                            build = await client.Builds.GetAsync<JenkinsBuildBase>(jobName, buildNumber);
+                        build = await client.Builds.GetAsync<JenkinsBuildBase>(jobName, buildNumber);
 
-                            if (build.Building == false) { break; }
+                        if (build.Building == false) { break; }
                         
-                            await Task.Delay(TimeSpan.FromSeconds(5));
-                        }
-                        catch (JenkinsJobGetBuildException)
-                        {
-                            /* このエラーは無視 */
-                        }
+                        await Task.Delay(TimeSpan.FromSeconds(5));
                     }
                 }
 
