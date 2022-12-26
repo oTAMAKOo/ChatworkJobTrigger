@@ -137,14 +137,27 @@ namespace ChatworkJobTrigger
             }
             catch (JenkinsJobGetBuildException)
             {
+                const int OnErrorRetryCount = 5;
+
+                var retryCount = 0;
+
                 while (true)
                 {
                     if(runner.BuildNumber.HasValue)
                     {
-                        build = await client.Builds.GetAsync<JenkinsBuildBase>(jobName, runner.BuildNumber.Value.ToString());
+                        try
+                        {
+                            build = await client.Builds.GetAsync<JenkinsBuildBase>(jobName, runner.BuildNumber.Value.ToString());
+                        }
+                        catch (JenkinsJobGetBuildException)
+                        {
+                            retryCount++;
+                        }
                     }
 
                     if (build != null){ break; }
+
+                    if (OnErrorRetryCount < retryCount){ throw; }
                     
                     await Task.Delay(TimeSpan.FromSeconds(5));
                 }
