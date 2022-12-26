@@ -123,14 +123,31 @@ namespace ChatworkJobTrigger
             };
 
             JenkinsBuildBase build = null;
-            
-            if(jobParameters != null && jobParameters.Any())
+
+            try
             {
-                build = await runner.RunWithParametersAsync(jobName, jobParameters);
+                if(jobParameters != null && jobParameters.Any())
+                {
+                    build = await runner.RunWithParametersAsync(jobName, jobParameters);
+                }
+                else
+                {
+                    build = await runner.RunAsync(jobName);
+                }
             }
-            else
+            catch (JenkinsJobGetBuildException)
             {
-                build = await runner.RunAsync(jobName);
+                while (true)
+                {
+                    if(runner.BuildNumber.HasValue)
+                    {
+                        build = await client.Builds.GetAsync<JenkinsBuildBase>(jobName, runner.BuildNumber.Value.ToString());
+                    }
+
+                    if (build != null){ break; }
+                    
+                    await Task.Delay(TimeSpan.FromSeconds(5));
+                }
             }
 
             if (build != null)
