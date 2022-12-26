@@ -149,7 +149,7 @@ namespace ChatworkJobTrigger
                         
                             await Task.Delay(TimeSpan.FromSeconds(5));
                         }
-                        catch (JenkinsJobGetBuildException e)
+                        catch (JenkinsJobGetBuildException)
                         {
                             /* このエラーは無視 */
                         }
