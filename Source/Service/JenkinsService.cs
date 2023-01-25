@@ -99,6 +99,7 @@ namespace ChatworkJobTrigger
 
             var runner = new JenkinsJobRunner(client)
             {
+                PollInterval = 2500,
                 BuildTimeout = setting.JenkinsBuildTimeout,
                 QueueTimeout = setting.JenkinsQueueTimeout,
             };
