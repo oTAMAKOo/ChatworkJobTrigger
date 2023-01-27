@@ -36,6 +36,8 @@ namespace ChatworkJobTrigger
 
         private const string ApiUrl = "https://api.chatwork.com/v2/";
 
+        private const int RetryCount = 3;
+
         //----- field -----
 
         private HttpClient httpClient = null;

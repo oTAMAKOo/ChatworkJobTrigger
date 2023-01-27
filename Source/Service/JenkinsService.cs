@@ -18,8 +18,9 @@ namespace ChatworkJobTrigger
         None = 0,
 
         Starting,
+        Pending,
         Queued,
-        Running,
+        Building,
         Success,
         Failed,
         Canceled,
@@ -89,7 +90,7 @@ namespace ChatworkJobTrigger
         public async Task<JobResult> ReqestBuild(string jobName, IDictionary<string, string> jobParameters, Action<JenkinsJobStatus, int?, int?> onJobStatusChanged)
         {
             var setting = Setting.Instance;
-
+            
             var jobInfo = new JobResult()
             {
                 JobName = jobName,
@@ -99,7 +100,7 @@ namespace ChatworkJobTrigger
 
             var runner = new JenkinsJobRunner(client)
             {
-                PollInterval = 30000,
+                PollInterval = 20000,
                 BuildTimeout = setting.JenkinsBuildTimeout,
                 QueueTimeout = setting.JenkinsQueueTimeout,
             };
@@ -108,11 +109,14 @@ namespace ChatworkJobTrigger
             {
                 switch (runner.Status) 
                 {
+                    case JenkinsJobStatus.Pending:
+                        jobInfo.Status = JobStatus.Pending;
+                        break;
                     case JenkinsJobStatus.Queued:
                         jobInfo.Status = JobStatus.Queued;
                         break;
                     case JenkinsJobStatus.Building:
-                        jobInfo.Status = JobStatus.Running;
+                        jobInfo.Status = JobStatus.Building;
                         break;
                 }
 
@@ -133,57 +137,24 @@ namespace ChatworkJobTrigger
                 build = await runner.RunAsync(jobName);
             }
 
-            if (build != null)
+            if (build == null){ return null; }
+
+            jobInfo.ResultInfo = build;
+
+            switch (build.Result)
             {
-                if (build.Number.HasValue)
-                {
-                    var retryCount = 0;
-
-                    var buildNumber =  build.Number.Value.ToString();
-                    
-                    while (true)
-                    {
-                        try
-                        {
-                            build = await client.Builds.GetAsync<JenkinsBuildBase>(jobName, buildNumber);
-
-                            if (build.Building == false) { break; }
-                        
-                            await Task.Delay(TimeSpan.FromSeconds(30));
-                        }
-                        catch
-                        {
-                            if (3 <= retryCount)
-                            {
-                                throw;
-                            }
-
-                            retryCount++;
-                        }
-                    }
-                }
-
-                jobInfo.ResultInfo = build;
-
-                switch (build.Result)
-                {
-                    case "SUCCESS":
-                        jobInfo.Status = JobStatus.Success;
-                        break;
-                    case "FAILURE":
-                        jobInfo.Status = JobStatus.Failed;
-                        break;
-                    case "ABORTED":
-                        jobInfo.Status = JobStatus.Canceled;
-                        break;
-                    default:
-                        jobInfo.Status = JobStatus.Unknown;
-                        break;
-                }
-            }
-            else
-            {
-                return null;
+                case "SUCCESS":
+                    jobInfo.Status = JobStatus.Success;
+                    break;
+                case "FAILURE":
+                    jobInfo.Status = JobStatus.Failed;
+                    break;
+                case "ABORTED":
+                    jobInfo.Status = JobStatus.Canceled;
+                    break;
+                default:
+                    jobInfo.Status = JobStatus.Unknown;
+                    break;
             }
 
             return jobInfo;

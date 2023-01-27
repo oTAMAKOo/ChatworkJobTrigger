@@ -47,20 +47,5 @@ namespace ChatworkJobTrigger
         
         //----- method -----
 
-        protected override void SetDefaultData(ref IniData data)
-        {
-            data[ChatworkSection][ChatworkApiKey] = "ABCDEFG123456789";
-            data[ChatworkSection][ChatworkRoomId] = "0123456789";
-            
-            data[JenkinsSection][JenkinsBaseUrlField] = "http://localhost:8080/";
-            data[JenkinsSection][JenkinsUserNameField] = "admin";
-            data[JenkinsSection][JenkinsApiTokenField] = "ABCDEFG123456789";
-            data[JenkinsSection][JenkinsLogFilePathField] = "/Users/<UserName>/.jenkins/jobs/#JOB_NAME#/builds/#BUILD_NUMBER#/log";
-
-            data[JenkinsSection][JenkinsBuildTimeoutField] = "3600";
-            data[JenkinsSection][JenkinsQueueTimeoutField] = "7200";
-
-            data[CommandSection][CommandDefineField] = "build, master";
-        }
     }
 }

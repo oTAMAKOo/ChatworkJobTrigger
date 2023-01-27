@@ -33,9 +33,7 @@ namespace ChatworkJobTrigger
 
             if (!File.Exists(configFilePath))
             {
-                CreateDefaultConfigFile(configFilePath);
-
-                throw new Exception($"Generated {fileName} file.\nPlease edit {configFilePath}.");
+                throw new FileNotFoundException($"{configFilePath} not found.");
             }
 
             var iniDataString = await File.ReadAllTextAsync(configFilePath);
@@ -45,17 +43,6 @@ namespace ChatworkJobTrigger
             iniData = parser.Parse(iniDataString);
 
             OnLoad();
-        }
-
-        private void CreateDefaultConfigFile(string configFilePath)
-        {
-            var parser = new IniFileParser.IniFileParser();
-
-            var data = new IniData();
-
-            SetDefaultData(ref data);
-
-            parser.WriteFile(configFilePath, data, Encoding.UTF8);
         }
 
         protected T GetData<T>(string section, string key, T defaultValue = default)
@@ -69,8 +56,6 @@ namespace ChatworkJobTrigger
 
             return (T)Convert.ChangeType(value, typeof(T));
         }
-
-        protected abstract void SetDefaultData(ref IniData iniData);
 
         protected virtual void OnLoad(){  }
     }

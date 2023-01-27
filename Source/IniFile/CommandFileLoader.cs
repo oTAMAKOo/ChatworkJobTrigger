@@ -85,16 +85,5 @@ namespace ChatworkJobTrigger
         {
             await base.Load();
         }
-
-        protected override void SetDefaultData(ref IniData data)
-        {
-            var sectionName = string.Format(ArgumentSectionFormat, 0);
-
-            data[sectionName][FieldKeyName] = "ABCDEFG123456789";
-            data[sectionName][TypeKeyName] = "string";
-            data[sectionName][ValueKeyName] = "xxx[xx, xxxx],aaa[aaaaa], abcdef[abc]";
-            data[sectionName][DefaultKeyName] = "xxx";
-            data[sectionName][DescriptionKeyName] = "";
-        }
     }
 }
