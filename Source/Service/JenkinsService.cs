@@ -7,6 +7,7 @@ using System.Net.Http.Headers;
 using System.Text;
 using System.Threading.Tasks;
 using JenkinsNET;
+using JenkinsNET.Exceptions;
 using JenkinsNET.Models;
 using JenkinsNET.Utilities;
 using Extensions;
@@ -98,6 +99,8 @@ namespace ChatworkJobTrigger
                 Status = JobStatus.Starting,
             };
 
+            // ビルド実行.
+
             var runner = new JenkinsJobRunner(client)
             {
                 PollInterval = 20000,
@@ -137,8 +140,46 @@ namespace ChatworkJobTrigger
                 build = await runner.RunAsync(jobName);
             }
 
+            // ビルド完了後の後処理を待つ.
+            
             if (build == null){ return null; }
 
+            var buildNumber =  build.Number.Value.ToString();
+
+            while (true)
+            {
+                var retry = false;
+
+                try
+                {
+                    build = await client.Builds.GetAsync<JenkinsBuildBase>(jobName, buildNumber);
+
+                    if (build.Building == false) { break; }
+                
+                    await Task.Delay(TimeSpan.FromSeconds(30));
+                }
+                catch (TimeoutException)
+                {
+                    retry = true;
+                }
+                catch (JenkinsJobGetBuildException)
+                {
+                    retry = true;
+                }
+                catch (Exception e)
+                {
+                    Console.WriteLine(e);
+                    throw;
+                }
+                
+                if (retry)
+                {
+                    await Task.Delay(TimeSpan.FromSeconds(3f));
+                }
+            }
+
+            // ビルド結果.
+             
             jobInfo.ResultInfo = build;
 
             switch (build.Result)
