@@ -36,7 +36,7 @@ namespace ChatworkJobTrigger
 
         private const string ApiUrl = "https://api.chatwork.com/v2/";
 
-        private const int RetryCount = 3;
+        private const int MaxRetryCount = 3;
 
         //----- field -----
 
@@ -167,28 +167,35 @@ namespace ChatworkJobTrigger
         {
             var result = string.Empty;
 
-            try
+            var retryCount = 0;
+
+            while (retryCount < MaxRetryCount)
             {
-                using (var response = await httpClient.SendAsync(requestMessage, cancelToken))
+                try
                 {
-                    if (response.IsSuccessStatusCode)
+                    using (var response = await httpClient.SendAsync(requestMessage, cancelToken))
                     {
-                        result = await response.Content.ReadAsStringAsync(cancelToken);
+                        if (response.IsSuccessStatusCode)
+                        {
+                            result = await response.Content.ReadAsStringAsync(cancelToken);
+                        }
+                        else
+                        {
+                            retryCount++;
+                        }
                     }
-                    else
-                    {
-                        Console.WriteLine(response.ToString());
-                    }
+
+                    if (!string.IsNullOrEmpty(result)){ break; }
                 }
-            }
-            catch (TimeoutException e)
-            {
-                Console.WriteLine(e);
-            }
-            catch (Exception e)
-            {
-                Console.WriteLine(e);
-                throw;
+                catch (TimeoutException)
+                {
+                    retryCount++;
+                }
+                catch (Exception e)
+                {
+                    Console.WriteLine(e);
+                    throw;
+                }
             }
 
             return result;
