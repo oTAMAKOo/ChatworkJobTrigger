@@ -196,6 +196,8 @@ namespace ChatworkJobTrigger
                     Console.WriteLine(e);
                     throw;
                 }
+
+                await Task.Delay(TimeSpan.FromSeconds(3f));
             }
 
             return result;
