@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using Extensions;
@@ -30,6 +31,8 @@ namespace ChatworkJobTrigger
     {
         //----- params -----
         
+        private static readonly Regex SpaceRegex = new Regex(@"\s+");
+
         //----- field -----
 
         private Command[] commands = null;
@@ -154,20 +157,27 @@ namespace ChatworkJobTrigger
 
         private JobTriggerInfo GetJobTriggerInfo(MessageData messageData)
         {
-            var body = messageData.body;
-
-            var triggerUserStr = GetTriggerUserStr();
-
-            var elements = body.Trim()
-                .Replace("\n", " ")
-                .Split(' ')
-                .Where(x => !x.Contains(triggerUserStr))
-                .ToArray();
-
+            var elements = BuildElements(messageData.body);
+            
             var command = elements.ElementAtOrDefault(0);
             var arguments = elements.Skip(1).ToArray();
 
             return new JobTriggerInfo(messageData.account, command, arguments);
+        }
+
+        private string[] BuildElements(string source)
+        {
+            const string space = " ";
+
+            var triggerUserStr = GetTriggerUserStr();
+
+            var str = source.Trim().Replace("\n", space);
+
+            str = SpaceRegex.Replace(str, space);
+
+            return str.Split(space)
+                .Where(x => !x.Contains(triggerUserStr))
+                .ToArray();
         }
     }
 }
