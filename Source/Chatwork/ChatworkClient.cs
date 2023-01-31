@@ -42,6 +42,10 @@ namespace ChatworkJobTrigger
 
         private HttpClient httpClient = null;
 
+        private string processRequestId = null;
+
+        private Queue<string> requestQueue = null;
+
         //----- property -----
 
         public string RoomId { get; private set; }
@@ -61,6 +65,8 @@ namespace ChatworkJobTrigger
             };
 
             httpClient.DefaultRequestHeaders.Add("X-ChatWorkToken", ApiToken);
+
+            requestQueue = new Queue<string>();
         }
 
         public async Task<string> GetMyAccount(CancellationToken cancelToken)
@@ -169,35 +175,46 @@ namespace ChatworkJobTrigger
 
             var retryCount = 0;
 
-            while (retryCount < MaxRetryCount)
+            var requestId = GetRequestId();
+
+            await WaitRequestQueue(requestId);
+
+            try
             {
-                try
+                while (retryCount < MaxRetryCount)
                 {
-                    using (var response = await httpClient.SendAsync(requestMessage, cancelToken))
+                    try
                     {
-                        if (response.IsSuccessStatusCode)
+                        using (var response = await httpClient.SendAsync(requestMessage, cancelToken))
                         {
-                            result = await response.Content.ReadAsStringAsync(cancelToken);
+                            if (response.IsSuccessStatusCode)
+                            {
+                                result = await response.Content.ReadAsStringAsync(cancelToken);
+                            }
+                            else
+                            {
+                                retryCount++;
+                            }
                         }
-                        else
-                        {
-                            retryCount++;
-                        }
+
+                        if (!string.IsNullOrEmpty(result)){ break; }
+                    }
+                    catch (TimeoutException)
+                    {
+                        retryCount++;
                     }
 
-                    if (!string.IsNullOrEmpty(result)){ break; }
+                    await Task.Delay(TimeSpan.FromSeconds(3f), cancelToken);
                 }
-                catch (TimeoutException)
-                {
-                    retryCount++;
-                }
-                catch (Exception e)
-                {
-                    Console.WriteLine(e);
-                    throw;
-                }
-
-                await Task.Delay(TimeSpan.FromSeconds(3f), cancelToken);
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e);
+                throw;
+            }
+            finally
+            {
+                RequestFinish(requestId);
             }
 
             return result;
@@ -209,35 +226,46 @@ namespace ChatworkJobTrigger
 
             var retryCount = 0;
 
-            while (retryCount < MaxRetryCount)
+            var requestId = GetRequestId();
+
+            await WaitRequestQueue(requestId);
+
+            try
             {
-                try
+                while (retryCount < MaxRetryCount)
                 {
-                    using (var response = await httpClient.PostAsync(requestUrl, multipart, cancelToken))
+                    try
                     {
-                        if (response.IsSuccessStatusCode)
+                        using (var response = await httpClient.PostAsync(requestUrl, multipart, cancelToken))
                         {
-                            result = await response.Content.ReadAsStringAsync(cancelToken);
+                            if (response.IsSuccessStatusCode)
+                            {
+                                result = await response.Content.ReadAsStringAsync(cancelToken);
+                            }
+                            else
+                            {
+                                retryCount++;
+                            }
                         }
-                        else
-                        {
-                            retryCount++;
-                        }
+
+                        if (!string.IsNullOrEmpty(result)){ break; }
+                    }
+                    catch (TimeoutException)
+                    {
+                        retryCount++;
                     }
 
-                    if (!string.IsNullOrEmpty(result)){ break; }
+                    await Task.Delay(TimeSpan.FromSeconds(3f), cancelToken);
                 }
-                catch (TimeoutException)
-                {
-                    retryCount++;
-                }
-                catch (Exception e)
-                {
-                    Console.WriteLine(e);
-                    throw;
-                }
-
-                await Task.Delay(TimeSpan.FromSeconds(3f), cancelToken);
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e);
+                throw;
+            }
+            finally
+            {
+                RequestFinish(requestId);
             }
 
             return result;
@@ -255,6 +283,36 @@ namespace ChatworkJobTrigger
             requestUrl += url;
 
             return new Uri(requestUrl);
+        }
+
+        private string GetRequestId()
+        {
+            return Guid.NewGuid().ToString("N");
+        }
+
+        private async Task WaitRequestQueue(string requestId)
+        {
+            requestQueue.Enqueue(requestId);
+
+            while (true)
+            {
+                if (string.IsNullOrEmpty(processRequestId))
+                {
+                    processRequestId = requestQueue.Dequeue();
+                }
+
+                if (processRequestId == requestId){ break; }
+
+                await Task.Delay(TimeSpan.FromSeconds(1f));
+            }
+        }
+
+        private void RequestFinish(string requestId)
+        {
+            if (processRequestId == requestId)
+            {
+                processRequestId = null;
+            }
         }
     }
 }
