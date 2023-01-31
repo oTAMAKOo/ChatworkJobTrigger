@@ -37,6 +37,8 @@ namespace ChatworkJobTrigger
         public JobStatus Status { get; set; }
 
         public JenkinsBuildBase ResultInfo { get; set; }
+
+        public int? BuildNumber { get; set; }
     }
 
     public sealed class JenkinsService : Singleton<JenkinsService>
@@ -100,9 +102,7 @@ namespace ChatworkJobTrigger
             };
 
             // ビルド実行.
-
-            int? buildNumber = null;
-
+            
             var runner = new JenkinsJobRunner(client)
             {
                 PollInterval = 20000,
@@ -112,6 +112,8 @@ namespace ChatworkJobTrigger
             
             runner.StatusChanged += () => 
             {
+                jobInfo.BuildNumber = runner.BuildNumber;
+
                 switch (runner.Status) 
                 {
                     case JenkinsJobStatus.Pending:
@@ -124,8 +126,6 @@ namespace ChatworkJobTrigger
                         jobInfo.Status = JobStatus.Building;
                         break;
                 }
-
-                buildNumber = runner.BuildNumber;
 
                 if (onJobStatusChanged != null)
                 {
@@ -153,9 +153,9 @@ namespace ChatworkJobTrigger
 
             // ビルド完了後の後処理を待つ.
 
-            if (!buildNumber.HasValue){ return null; }
+            if (!jobInfo.BuildNumber.HasValue){ return null; }
 
-            var buildNumberStr = buildNumber.ToString();
+            var buildNumberStr = jobInfo.BuildNumber.ToString();
 
             while (true)
             {

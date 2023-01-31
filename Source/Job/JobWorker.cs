@@ -172,9 +172,9 @@ namespace ChatworkJobTrigger
 
                 if (result.Status == JobStatus.Failed)
                 {
-                    if (result.ResultInfo != null && result.ResultInfo.Number.HasValue)
+                    if (result.BuildNumber.HasValue)
                     {
-                        var buildNumber = result.ResultInfo.Number.Value;
+                        var buildNumber = result.BuildNumber.Value;
                                 
                         filePath = jenkinsService.GetLogFilePath(result.JobName, buildNumber);
 
