@@ -101,6 +101,8 @@ namespace ChatworkJobTrigger
 
             // ビルド実行.
 
+            int? buildNumber = null;
+
             var runner = new JenkinsJobRunner(client)
             {
                 PollInterval = 20000,
@@ -123,6 +125,8 @@ namespace ChatworkJobTrigger
                         break;
                 }
 
+                buildNumber = runner.BuildNumber;
+
                 if (onJobStatusChanged != null)
                 {
                     onJobStatusChanged.Invoke(runner.Status, runner.QueueItemNumber, runner.BuildNumber);
@@ -131,20 +135,32 @@ namespace ChatworkJobTrigger
 
             JenkinsBuildBase build = null;
             
-            if(jobParameters != null && jobParameters.Any())
+            try
             {
-                build = await runner.RunWithParametersAsync(jobName, jobParameters);
+                if(jobParameters != null && jobParameters.Any())
+                {
+                    build = await runner.RunWithParametersAsync(jobName, jobParameters);
+                }
+                else
+                {
+                    build = await runner.RunAsync(jobName);
+                }
             }
-            else
+            catch (JenkinsJobGetBuildException)
             {
-                build = await runner.RunAsync(jobName);
+                /* エラーとして扱わない */
             }
 
             // ビルド完了後の後処理を待つ.
             
-            if (build == null){ return null; }
+            if (build != null)
+            {
+                buildNumber =  build.Number;
+            }
 
-            var buildNumber =  build.Number.Value.ToString();
+            if (!buildNumber.HasValue){ return null; }
+
+            var buildNumberStr = buildNumber.ToString();
 
             while (true)
             {
@@ -152,7 +168,7 @@ namespace ChatworkJobTrigger
 
                 try
                 {
-                    build = await client.Builds.GetAsync<JenkinsBuildBase>(jobName, buildNumber);
+                    build = await client.Builds.GetAsync<JenkinsBuildBase>(jobName, buildNumberStr);
 
                     if (build.Building == false) { break; }
                 
@@ -166,12 +182,7 @@ namespace ChatworkJobTrigger
                 {
                     retry = true;
                 }
-                catch (Exception e)
-                {
-                    Console.WriteLine(e);
-                    throw;
-                }
-                
+
                 if (retry)
                 {
                     await Task.Delay(TimeSpan.FromSeconds(3f));
