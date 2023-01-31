@@ -192,14 +192,12 @@ namespace ChatworkJobTrigger
                             if (response.IsSuccessStatusCode)
                             {
                                 result = await response.Content.ReadAsStringAsync(cancelToken);
-                            }
-                            else
-                            {
-                                retryCount++;
-                            }
-                        }
 
-                        if (!string.IsNullOrEmpty(result)){ break; }
+                                break;
+                            }
+
+                            retryCount++;
+                        }
                     }
                     catch (TimeoutException)
                     {
@@ -243,14 +241,12 @@ namespace ChatworkJobTrigger
                             if (response.IsSuccessStatusCode)
                             {
                                 result = await response.Content.ReadAsStringAsync(cancelToken);
-                            }
-                            else
-                            {
-                                retryCount++;
-                            }
-                        }
 
-                        if (!string.IsNullOrEmpty(result)){ break; }
+                                break;
+                            }
+                            
+                            retryCount++;
+                        }
                     }
                     catch (TimeoutException)
                     {
