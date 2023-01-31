@@ -71,7 +71,7 @@ namespace ChatworkJobTrigger
 
         public async Task<string> GetMyAccount(CancellationToken cancelToken)
         {
-            var requestMessage = new HttpRequestMessage
+            Func<HttpRequestMessage> requestGenerator = () => new HttpRequestMessage
             {
                 Method = HttpMethod.Get,
                 RequestUri = GetRequestUri($"me", false),
@@ -82,7 +82,7 @@ namespace ChatworkJobTrigger
                 },
             };
             
-            var result = await SendAsync(requestMessage, cancelToken);
+            var result = await SendAsync(requestGenerator, cancelToken);
 
             return result;
         }
@@ -91,7 +91,7 @@ namespace ChatworkJobTrigger
         {
             var forceFlag = force ? 1 : 0;
 
-            var requestMessage = new HttpRequestMessage
+            Func<HttpRequestMessage> requestGenerator = () => new HttpRequestMessage
             {
                 Method = HttpMethod.Get,
                 RequestUri = GetRequestUri($"messages?force={forceFlag}"),
@@ -102,7 +102,7 @@ namespace ChatworkJobTrigger
                 },
             };
 
-            var result = await SendAsync(requestMessage, cancelToken);
+            var result = await SendAsync(requestGenerator, cancelToken);
 
             return result;
         }
@@ -111,7 +111,7 @@ namespace ChatworkJobTrigger
         {
             var body = $"?body={ Uri.EscapeDataString(message)}&self_unread={(selfUnRead ? 1 : 0)}";
 
-            var requestMessage = new HttpRequestMessage
+            Func<HttpRequestMessage> requestGenerator = () => new HttpRequestMessage
             {
                 Method = HttpMethod.Post,
                 RequestUri = GetRequestUri("messages" + body),
@@ -122,7 +122,7 @@ namespace ChatworkJobTrigger
                 },
             };
 
-            var result = await SendAsync(requestMessage, cancelToken);
+            var result = await SendAsync(requestGenerator, cancelToken);
 
             return result;
         }
@@ -169,7 +169,7 @@ namespace ChatworkJobTrigger
             return result;
         }
 
-        private async Task<string> SendAsync(HttpRequestMessage requestMessage, CancellationToken cancelToken)
+        private async Task<string> SendAsync(Func<HttpRequestMessage> requestGenerator, CancellationToken cancelToken)
         {
             var result = string.Empty;
 
@@ -185,6 +185,8 @@ namespace ChatworkJobTrigger
                 {
                     try
                     {
+                        var requestMessage = requestGenerator.Invoke();
+
                         using (var response = await httpClient.SendAsync(requestMessage, cancelToken))
                         {
                             if (response.IsSuccessStatusCode)
