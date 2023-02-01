@@ -146,6 +146,10 @@ namespace ChatworkJobTrigger
                     await runner.RunAsync(jobName);
                 }
             }
+            catch (JenkinsJobBuildException)
+            {
+                /* エラーとして扱わない */
+            }
             catch (JenkinsJobGetBuildException)
             {
                 /* エラーとして扱わない */
