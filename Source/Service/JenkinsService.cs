@@ -161,10 +161,10 @@ namespace ChatworkJobTrigger
 
             var buildNumberStr = jobInfo.BuildNumber.ToString();
 
+            var retryCount = 0;
+
             while (true)
             {
-                var retry = false;
-
                 try
                 {
                     build = await client.Builds.GetAsync<JenkinsBuildBase>(jobName, buildNumberStr);
@@ -172,20 +172,24 @@ namespace ChatworkJobTrigger
                     if (!build.Building.HasValue || !build.Building.Value) { break; }
                 
                     await Task.Delay(TimeSpan.FromSeconds(30));
+
+                    retryCount = 0;
                 }
                 catch (TimeoutException)
                 {
-                    retry = true;
+                    retryCount++;
                 }
                 catch (JenkinsJobGetBuildException)
                 {
-                    retry = true;
+                    retryCount++;
                 }
 
-                if (retry)
+                if (0 < retryCount)
                 {
                     await Task.Delay(TimeSpan.FromSeconds(3f));
                 }
+
+                if (5 < retryCount){ break; }
             }
 
             // ビルド結果.
