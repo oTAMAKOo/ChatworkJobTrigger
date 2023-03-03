@@ -170,7 +170,7 @@ namespace ChatworkJobTrigger
 
                 var filePath = string.Empty;
 
-                if (result.Status == JobStatus.Failed)
+                if (result.Status == JobStatus.Failed || result.Status == JobStatus.Unknown)
                 {
                     if (result.BuildNumber.HasValue)
                     {

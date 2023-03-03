@@ -169,7 +169,7 @@ namespace ChatworkJobTrigger
                 {
                     build = await client.Builds.GetAsync<JenkinsBuildBase>(jobName, buildNumberStr);
 
-                    if (build.Building == false) { break; }
+                    if (!build.Building.HasValue || !build.Building.Value) { break; }
                 
                     await Task.Delay(TimeSpan.FromSeconds(30));
                 }
