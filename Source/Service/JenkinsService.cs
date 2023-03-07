@@ -139,11 +139,16 @@ namespace ChatworkJobTrigger
             {
                 if(jobParameters != null && jobParameters.Any())
                 {
-                    await runner.RunWithParametersAsync(jobName, jobParameters);
+                    build = await runner.RunWithParametersAsync(jobName, jobParameters);
                 }
                 else
                 {
-                    await runner.RunAsync(jobName);
+                    build = await runner.RunAsync(jobName);
+                }
+
+                if (build != null)
+                {
+                    jobInfo.BuildNumber = build.Number;
                 }
             }
             catch (JenkinsJobBuildException)
@@ -154,6 +159,10 @@ namespace ChatworkJobTrigger
             {
                 /* エラーとして扱わない */
             }
+
+            // ビルド開始を暫く待つ.
+
+            await Task.Delay(TimeSpan.FromSeconds(5f));
 
             // ビルド完了後の後処理を待つ.
 
