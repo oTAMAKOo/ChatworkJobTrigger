@@ -199,7 +199,7 @@ namespace ChatworkJobTrigger
                             retryCount++;
                         }
                     }
-                    catch (TimeoutException)
+                    catch (Exception)
                     {
                         retryCount++;
                     }
@@ -248,7 +248,7 @@ namespace ChatworkJobTrigger
                             retryCount++;
                         }
                     }
-                    catch (TimeoutException)
+                    catch (Exception)
                     {
                         retryCount++;
                     }
