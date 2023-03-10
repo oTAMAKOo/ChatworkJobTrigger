@@ -47,11 +47,6 @@ namespace ChatworkJobTrigger
 
             try
             {
-                if (arguments.IsEmpty())
-                {
-                    throw new ArgumentException("Arguments is empty.");
-                }
-
                 var firstArgumentStr = arguments.ElementAtOrDefault(0, string.Empty).ToLower();
 
                 switch (firstArgumentStr)
