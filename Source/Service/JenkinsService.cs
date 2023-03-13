@@ -201,6 +201,11 @@ namespace ChatworkJobTrigger
                     jobInfo.Status = JobStatus.Unknown;
                     break;
             }
+            
+            if (onJobStatusChanged != null)
+            {
+                onJobStatusChanged.Invoke(jobInfo.Status, null, jobInfo.BuildNumber);
+            }
 
             return jobInfo;
         }
