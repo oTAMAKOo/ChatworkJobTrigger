@@ -114,8 +114,6 @@ namespace ChatworkJobTrigger
         {
             var workerManager = WorkerManager.Instance;
 
-            workerManager.Update();
-
             if (command == null){ return; }
 
             var jobWorker = workerManager.CreateNewWorker(message);
@@ -151,7 +149,7 @@ namespace ChatworkJobTrigger
             
             if (jobWorker != null)
             {
-                await jobWorker.GetStatus(cancelToken);
+                await jobWorker.SendCurrentStatus(cancelToken);
             }
         }
 

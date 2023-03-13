@@ -1,9 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
+﻿
+using System;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using JenkinsNET;
 using Extensions;
 using ChatworkJobTrigger.Chatwork;
 
@@ -15,7 +12,7 @@ namespace ChatworkJobTrigger
         
         //----- field -----
 
-        private List<JobWorker> jobWorkers = null;
+        private FixedQueue<JobWorker> jobWorkers = null;
 
         //----- property -----
 
@@ -23,21 +20,16 @@ namespace ChatworkJobTrigger
         
         protected override void OnCreate()
         {
-            jobWorkers = new List<JobWorker>();
+            jobWorkers = new FixedQueue<JobWorker>(1024);
         }
-
-        public void Update()
-        {
-            jobWorkers = jobWorkers.Where(x => x.Status != JenkinsJobStatus.Complete).ToList();
-        }
-
+        
         public JobWorker CreateNewWorker(MessageData triggerMessage)
         {
             var token = Guid.NewGuid().ToString("N").Substring(0, 8);
 
             var jobWorker = new JobWorker(token, triggerMessage);
 
-            jobWorkers.Add(jobWorker);
+            jobWorkers.Enqueue(jobWorker);
 
             return jobWorker;
         }

@@ -5,7 +5,6 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using JenkinsNET;
 using Extensions;
 using ChatworkJobTrigger.Chatwork;
 
@@ -29,7 +28,7 @@ namespace ChatworkJobTrigger
 
         public int? BuildNumber { get; private set; }
 
-        public JenkinsJobStatus Status { get; private set; }
+        public JobStatus Status { get; private set; }
 
         public MessageData TriggerMessage { get; private set; }
 
@@ -124,11 +123,16 @@ namespace ChatworkJobTrigger
             }
         }
 
-        public async Task GetStatus(CancellationToken cancelToken)
+        public async Task SendCurrentStatus(CancellationToken cancelToken)
         {
             var chatworkService = ChatworkService.Instance;
+            var jenkinsService = JenkinsService.Instance;
+
+            var replyStr = chatworkService.GetReplyStr(TriggerMessage);
             
-            var message = chatworkService.GetReplyStr(TriggerMessage) + Status;
+            var jobMessage = jenkinsService.GetJobMessage(Status, BuildNumber);
+
+            var message = replyStr + jobMessage;
 
             await chatworkService.SendMessage(message, cancelToken);
         }
@@ -159,7 +163,7 @@ namespace ChatworkJobTrigger
             if (result != null)
             {
                 resultMessage += chatworkService.GetReplyStr(TriggerMessage);
-                resultMessage += jenkinsService.GetJobResultMessage(result);
+                resultMessage += jenkinsService.GetJobMessage(result.Status, result.BuildNumber);
 
                 // ジョブ失敗時にはジョブのログファイルを送る.
 
@@ -365,17 +369,15 @@ namespace ChatworkJobTrigger
             return value;
         }
 
-        private void OnJobStatusChanged(JenkinsJobStatus jobStatus, int? queuedNumber, int? buildNumber)
+        private void OnJobStatusChanged(JobStatus jobStatus, int? queuedNumber, int? buildNumber)
         {
             Status = jobStatus;
             
             if (TriggerMessage == null){ return; }
          
             var chatworkService = ChatworkService.Instance;
-            var workerManager = WorkerManager.Instance;
-
-            var textDefine = TextDefine.Instance;
-
+            var jenkinsService = JenkinsService.Instance;
+            
             var message = string.Empty;
 
             var replyStr = chatworkService.GetReplyStr(TriggerMessage);
@@ -385,8 +387,8 @@ namespace ChatworkJobTrigger
 
             switch (jobStatus)
             {
-                case JenkinsJobStatus.Queued:
-                    message = replyStr + textDefine.JobQueued.Replace("#BUILD_TOKEN#", Token);
+                case JobStatus.Queued:
+                    message =  replyStr + jenkinsService.GetJobMessage(jobStatus, buildNumber);
                     break;
             }
 
@@ -394,8 +396,6 @@ namespace ChatworkJobTrigger
             {
                 chatworkService.SendMessage(message, CancellationToken.None).Forget();
             }
-
-            workerManager.Update();
         }
     }
 }

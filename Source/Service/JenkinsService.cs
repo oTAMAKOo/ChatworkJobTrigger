@@ -71,26 +71,7 @@ namespace ChatworkJobTrigger
             return Task.CompletedTask;
         }
 
-        private string GetJobStatusText(string jobName, string jobArguments, JobStatus status, int? buildNumber = null)
-        {
-            var text = $"{status} : ";
-
-            if (buildNumber.HasValue)
-            {
-                text += $"({buildNumber.Value})";
-            }
-
-            text += $"{jobName}";
-
-            if (!string.IsNullOrEmpty(jobArguments))
-            {
-                text += $" {jobArguments}";
-            }
-
-            return text;
-        }
-
-        public async Task<JobResult> ReqestBuild(string jobName, IDictionary<string, string> jobParameters, Action<JenkinsJobStatus, int?, int?> onJobStatusChanged)
+        public async Task<JobResult> ReqestBuild(string jobName, IDictionary<string, string> jobParameters, Action<JobStatus, int?, int?> onJobStatusChanged)
         {
             var setting = Setting.Instance;
             
@@ -129,7 +110,7 @@ namespace ChatworkJobTrigger
 
                 if (onJobStatusChanged != null)
                 {
-                    onJobStatusChanged.Invoke(runner.Status, runner.QueueItemNumber, runner.BuildNumber);
+                    onJobStatusChanged.Invoke(jobInfo.Status, runner.QueueItemNumber, runner.BuildNumber);
                 }
             };
 
@@ -266,13 +247,13 @@ namespace ChatworkJobTrigger
             return result;
         }
 
-        public string GetJobResultMessage(JobResult result)
+        public string GetJobMessage(JobStatus status, int? buildNumber)
         {
             var textDefine = TextDefine.Instance;
 
             var message = string.Empty;
 
-            switch (result.Status)
+            switch (status)
             {
                 case JobStatus.Success:
                     message += textDefine.JobSuccess;
@@ -283,12 +264,13 @@ namespace ChatworkJobTrigger
                 case JobStatus.Canceled:
                     message += textDefine.JobCanceled;
                     break;
+                default:
+                    message += $"{status} #BUILD_NUMBER#";
+                    break;
             }
 
-            if (result.ResultInfo != null)
+            if (buildNumber.HasValue)
             {
-                var buildNumber = result.ResultInfo.Number;
-
                 message = message.Replace("#BUILD_NUMBER#", buildNumber.ToString());
             }
 
