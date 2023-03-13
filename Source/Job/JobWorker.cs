@@ -130,7 +130,7 @@ namespace ChatworkJobTrigger
 
             var replyStr = chatworkService.GetReplyStr(TriggerMessage);
             
-            var jobMessage = jenkinsService.GetJobMessage(Status, BuildNumber);
+            var jobMessage = jenkinsService.GetJobMessage(Status, BuildNumber, Token);
 
             var message = replyStr + jobMessage;
 
@@ -163,7 +163,7 @@ namespace ChatworkJobTrigger
             if (result != null)
             {
                 resultMessage += chatworkService.GetReplyStr(TriggerMessage);
-                resultMessage += jenkinsService.GetJobMessage(result.Status, result.BuildNumber);
+                resultMessage += jenkinsService.GetJobMessage(result.Status, result.BuildNumber, Token);
 
                 // ジョブ失敗時にはジョブのログファイルを送る.
 
@@ -388,7 +388,7 @@ namespace ChatworkJobTrigger
             switch (jobStatus)
             {
                 case JobStatus.Queued:
-                    message = replyStr + jenkinsService.GetJobMessage(jobStatus, buildNumber);
+                    message = replyStr + jenkinsService.GetJobMessage(jobStatus, buildNumber, Token);
                     break;
             }
 
