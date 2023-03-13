@@ -247,7 +247,7 @@ namespace ChatworkJobTrigger
             return result;
         }
 
-        public string GetJobMessage(JobStatus status, int? buildNumber)
+        public string GetJobMessage(JobStatus status, int? buildNumber, string buildToken)
         {
             var textDefine = TextDefine.Instance;
 
@@ -255,21 +255,29 @@ namespace ChatworkJobTrigger
 
             switch (status)
             {
+                case JobStatus.Queued:
+                    message = textDefine.JobQueued;
+                    break;
                 case JobStatus.Success:
-                    message += textDefine.JobSuccess;
+                    message = textDefine.JobSuccess;
                     break;
                 case JobStatus.Failed:
-                    message += textDefine.JobFailed;
+                    message = textDefine.JobFailed;
                     break;
                 case JobStatus.Canceled:
-                    message += textDefine.JobCanceled;
+                    message = textDefine.JobCanceled;
                     break;
                 default:
-                    message += $"{status} #BUILD_NUMBER#";
+                    message = $"{status} #BUILD_NUMBER#";
                     break;
             }
 
-            message = message.Replace("#BUILD_NUMBER#", buildNumber.HasValue ? buildNumber.ToString() : string.Empty);
+            if (!string.IsNullOrEmpty(message))
+            {
+                message = message
+                    .Replace("#BUILD_NUMBER#", buildNumber.ToString())
+                    .Replace("#BUILD_TOKEN#", buildToken);
+            }
 
             return message;
         }

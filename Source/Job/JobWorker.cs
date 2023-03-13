@@ -388,7 +388,7 @@ namespace ChatworkJobTrigger
             switch (jobStatus)
             {
                 case JobStatus.Queued:
-                    message =  replyStr + jenkinsService.GetJobMessage(jobStatus, buildNumber);
+                    message = replyStr + jenkinsService.GetJobMessage(jobStatus, buildNumber);
                     break;
             }
 
