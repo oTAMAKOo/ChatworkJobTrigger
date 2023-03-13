@@ -130,9 +130,9 @@ namespace ChatworkJobTrigger
 
             var replyStr = chatworkService.GetReplyStr(TriggerMessage);
             
-            var jobMessage = jenkinsService.GetJobMessage(Status, BuildNumber, Token);
+            var jobStatusMessage = jenkinsService.GetJobStatusMessage(Status, BuildNumber, Token);
 
-            var message = replyStr + jobMessage;
+            var message = replyStr + jobStatusMessage;
 
             await chatworkService.SendMessage(message, cancelToken);
         }

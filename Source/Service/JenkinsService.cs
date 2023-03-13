@@ -282,6 +282,11 @@ namespace ChatworkJobTrigger
             return message;
         }
 
+        public string GetJobStatusMessage(JobStatus status, int? buildNumber, string buildToken)
+        {
+            return $"{status} Build: [No.{buildNumber}] Token: {buildToken}";
+        }
+
         public string GetLogFilePath(string jobName, int buildNumber)
         {
             var setting = Setting.Instance;
