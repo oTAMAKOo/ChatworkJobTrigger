@@ -269,10 +269,7 @@ namespace ChatworkJobTrigger
                     break;
             }
 
-            if (buildNumber.HasValue)
-            {
-                message = message.Replace("#BUILD_NUMBER#", buildNumber.ToString());
-            }
+            message = message.Replace("#BUILD_NUMBER#", buildNumber.HasValue ? buildNumber.ToString() : string.Empty);
 
             return message;
         }
