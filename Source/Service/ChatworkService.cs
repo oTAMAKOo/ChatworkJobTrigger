@@ -70,7 +70,7 @@ namespace ChatworkJobTrigger
                 var messages = JsonConvert.DeserializeObject<MessageData[]>(json);
             
                 // 前回取得後以降に投稿・更新された対象にフィルタリング.
-                result = messages.Where(x =>　unixTime < x.send_time).ToArray();
+                result = messages.Where(x =>　unixTime <= x.send_time).ToArray();
             }
 
             fetchTime = time;
