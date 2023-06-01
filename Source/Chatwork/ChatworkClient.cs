@@ -296,7 +296,14 @@ namespace ChatworkJobTrigger
             {
                 if (string.IsNullOrEmpty(processRequestId))
                 {
-                    processRequestId = requestQueue.Dequeue();
+                    if (requestQueue.Any())
+                    {
+                        processRequestId = requestQueue.Dequeue();
+                    }
+                    else
+                    {
+                        break;
+                    }
                 }
 
                 if (processRequestId == requestId){ break; }
