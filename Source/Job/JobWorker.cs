@@ -361,6 +361,22 @@ namespace ChatworkJobTrigger
                 } 
             }
 
+            //----- デフォルト引数 -----
+
+            foreach (var commandArgument in command.Arguments)
+            {
+                var fieldName = commandArgument.Field;
+
+                if (dictionary.ContainsKey(fieldName)){ continue; }
+
+                if (commandArgument.Require){ continue; }
+
+                var valueStr = commandArgument.DefaultValue;
+                var value = ConvertValue(commandArgument.Type, valueStr);
+
+                dictionary.Add(fieldName, value);
+            }
+
             return dictionary;
         }
         
