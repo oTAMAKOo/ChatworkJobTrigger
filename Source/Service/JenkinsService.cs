@@ -39,6 +39,8 @@ namespace ChatworkJobTrigger
         public JenkinsBuildBase ResultInfo { get; set; }
 
         public int? BuildNumber { get; set; }
+
+        public Exception Error { get; set; }
     }
 
     public sealed class JenkinsService : Singleton<JenkinsService>
@@ -132,13 +134,9 @@ namespace ChatworkJobTrigger
                     jobInfo.BuildNumber = build.Number;
                 }
             }
-            catch (JenkinsJobBuildException)
+            catch (Exception e)
             {
-                /* エラーとして扱わない */
-            }
-            catch (JenkinsJobGetBuildException)
-            {
-                /* エラーとして扱わない */
+                jobInfo.Error = e;
             }
 
             // ビルド開始を暫く待つ.
@@ -147,7 +145,7 @@ namespace ChatworkJobTrigger
 
             // ビルド完了後の後処理を待つ.
 
-            if (!jobInfo.BuildNumber.HasValue){ return null; }
+            if (!jobInfo.BuildNumber.HasValue){ return jobInfo; }
 
             var buildNumberStr = jobInfo.BuildNumber.ToString();
 
