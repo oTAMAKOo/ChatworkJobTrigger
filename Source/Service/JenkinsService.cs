@@ -121,8 +121,8 @@ namespace ChatworkJobTrigger
             
             try
             {
-                ServicePointManager.Expect100Continue = false;
-                ServicePointManager.SecurityProtocol = SecurityProtocolType.Tls | SecurityProtocolType.Tls11 | SecurityProtocolType.Tls12;
+                //ServicePointManager.Expect100Continue = false;
+                //ServicePointManager.SecurityProtocol = SecurityProtocolType.Tls | SecurityProtocolType.Tls11 | SecurityProtocolType.Tls12;
 
                 if(jobParameters != null && jobParameters.Any())
                 {
