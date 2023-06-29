@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Linq.Expressions;
 using System.Threading;
 using System.Threading.Tasks;
 using Extensions;
@@ -202,9 +203,13 @@ namespace ChatworkJobTrigger
                 {
                     resultMessage += $"\n{result.Error.Message}";
 
-                    if (result.Error.InnerException != null)
+                    var exception = result.Error.InnerException;
+
+                    while (exception != null)
                     {
-                        resultMessage += $"\n{result.Error.InnerException.Message}";
+                        resultMessage += $"\n - {exception.Message}";
+
+                        exception = result.Error.InnerException;
                     }
                 }
 
