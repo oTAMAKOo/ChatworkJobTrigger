@@ -14,8 +14,6 @@ namespace ChatworkJobTrigger
 
         private const int FetchIntervalSeconds = 5;
 
-        private static readonly DateTime UNIX_EPOCH = new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc);
-        
         //----- field -----
         
         private ChatworkClient client = null;
@@ -67,7 +65,7 @@ namespace ChatworkJobTrigger
 
                 if (!string.IsNullOrEmpty(json))
                 {
-                    var unixTime = (long)fetchTime.ToUniversalTime().Subtract(UNIX_EPOCH).TotalSeconds;
+                    var unixTime = (long)fetchTime.ToUniversalTime().Subtract(TimeExtensions.UNIX_EPOCH).TotalSeconds;
 
                     var messages = JsonConvert.DeserializeObject<MessageData[]>(json);
             

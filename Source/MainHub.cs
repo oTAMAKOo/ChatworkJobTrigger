@@ -75,9 +75,11 @@ namespace ChatworkJobTrigger
             try
             {
                 // 新規メッセージ取得.
+
                 var messages = await chatworkService.Fetch(cancelToken);
 
                 // ジョブトリガー実行.
+
                 if (messages.Any())
                 {
                     foreach (var message in messages)
@@ -87,6 +89,8 @@ namespace ChatworkJobTrigger
                         jobTriggerService.InvokeTrigger(message, cancelToken).Forget();
                     }
                 }
+
+                // 定期的にGCを実行.
 
                 var now = DateTime.Now;
 
