@@ -61,20 +61,27 @@ namespace ChatworkJobTrigger
 
             if (time < nextFetchTime){ return result; }
 
-            var json = await client.GetMessage(cancelToken);
-
-            if (!string.IsNullOrEmpty(json))
+            try
             {
-                var unixTime = (long)fetchTime.ToUniversalTime().Subtract(UNIX_EPOCH).TotalSeconds;
+                var json = await client.GetMessage(cancelToken);
 
-                var messages = JsonConvert.DeserializeObject<MessageData[]>(json);
+                if (!string.IsNullOrEmpty(json))
+                {
+                    var unixTime = (long)fetchTime.ToUniversalTime().Subtract(UNIX_EPOCH).TotalSeconds;
+
+                    var messages = JsonConvert.DeserializeObject<MessageData[]>(json);
             
-                // 前回取得後以降に投稿・更新された対象にフィルタリング.
-                result = messages.Where(x =>　unixTime <= x.send_time).ToArray();
-            }
+                    // 前回取得後以降に投稿・更新された対象にフィルタリング.
+                    result = messages.Where(x =>　unixTime <= x.send_time).ToArray();
+                }
 
-            fetchTime = time;
-            nextFetchTime = time.AddSeconds(FetchIntervalSeconds);
+                fetchTime = time;
+                nextFetchTime = time.AddSeconds(FetchIntervalSeconds);
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e);
+            }
 
             return result;
         }
@@ -94,12 +101,26 @@ namespace ChatworkJobTrigger
 
         public async Task SendMessage(string message, CancellationToken cancelToken)
         {
-            await client.SendMessage(message, cancelToken);
+            try
+            {
+                await client.SendMessage(message, cancelToken);
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e);
+            }
         }
 
         public async Task SendFile(string filePath, string message, string displayName, CancellationToken cancelToken)
         {
-            await client.SendFile(filePath, message, displayName, cancelToken);
+            try
+            {
+                await client.SendFile(filePath, message, displayName, cancelToken);
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e);
+            }
         }
     }
 }
