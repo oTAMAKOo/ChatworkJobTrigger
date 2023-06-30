@@ -175,6 +175,10 @@ namespace ChatworkJobTrigger
                 {
                     retryCount++;
                 }
+                catch (Exception ex)
+                {
+                    Console.WriteLine(ex);
+                }
 
                 if (0 < retryCount)
                 {
