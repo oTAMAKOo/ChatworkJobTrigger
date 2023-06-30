@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Linq.Expressions;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Extensions;
@@ -163,6 +164,8 @@ namespace ChatworkJobTrigger
 
             if (result.Error == null)
             {
+                Status = result.Status;
+
                 resultMessage += chatworkService.GetReplyStr(TriggerMessage);
                 resultMessage += jenkinsService.GetJobMessage(result.Status, result.BuildNumber, Token);
 
@@ -196,22 +199,33 @@ namespace ChatworkJobTrigger
             }
             else
             {
+                Status = JobStatus.Unknown;
+
                 resultMessage += chatworkService.GetReplyStr(TriggerMessage);
                 resultMessage += "Jenkins job info get failed.";
 
-                if (result.Error != null)
+                var errorMessageBuilder = new StringBuilder();
+
+                errorMessageBuilder.AppendLine(result.Error.Message);
+
+                var exception = result.Error.InnerException;
+
+                while (exception != null)
                 {
-                    resultMessage += $"\n{result.Error.Message}";
+                    errorMessageBuilder.AppendLine($"- {exception.Message}");
 
-                    var exception = result.Error.InnerException;
-
-                    while (exception != null)
-                    {
-                        resultMessage += $"\n - {exception.Message}";
-
-                        exception = result.Error.InnerException;
-                    }
+                    exception = result.Error.InnerException;
                 }
+
+                var errorMessage = errorMessageBuilder.ToString();
+
+                ConsoleUtility.Separator();
+
+                Console.WriteLine(errorMessage);
+
+                ConsoleUtility.Separator();
+
+                resultMessage += $"\n{errorMessage}";
 
                 await chatworkService.SendMessage(resultMessage, cancelToken);
             }
