@@ -2,7 +2,6 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Text;
@@ -121,9 +120,6 @@ namespace ChatworkJobTrigger
             
             try
             {
-                //ServicePointManager.Expect100Continue = false;
-                //ServicePointManager.SecurityProtocol = SecurityProtocolType.Tls | SecurityProtocolType.Tls11 | SecurityProtocolType.Tls12;
-
                 if(jobParameters != null && jobParameters.Any())
                 {
                     build = await runner.RunWithParametersAsync(jobName, jobParameters);

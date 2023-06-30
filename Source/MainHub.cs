@@ -1,12 +1,12 @@
 ﻿
+using Extensions;
 using System;
 using System.Linq;
 using System.Net;
-using System.Threading;
-using System.Threading.Tasks;
 using System.Net.Security;
 using System.Security.Cryptography.X509Certificates;
-using Extensions;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace ChatworkJobTrigger
 {
@@ -15,6 +15,8 @@ namespace ChatworkJobTrigger
         //----- params -----
         
         //----- field -----
+
+        private DateTime nextGCExecute = DateTime.MinValue;
 
         //----- property -----
 
@@ -36,6 +38,8 @@ namespace ChatworkJobTrigger
 
             // SSL.
 
+            //ServicePointManager.Expect100Continue = false;
+            //ServicePointManager.SecurityProtocol = SecurityProtocolType.Tls | SecurityProtocolType.Tls11 | SecurityProtocolType.Tls12;
             ServicePointManager.ServerCertificateValidationCallback = OnRemoteCertificateValidationCallback;
 
             // ChatWork.
@@ -57,6 +61,10 @@ namespace ChatworkJobTrigger
             await jobTriggerService.Initialize();
 
             ConsoleUtility.Separator();
+
+            // GC.
+
+            nextGCExecute = DateTime.Now.AddSeconds(60);
         }
 
         public async Task Update(CancellationToken cancelToken)
@@ -78,6 +86,15 @@ namespace ChatworkJobTrigger
 
                         jobTriggerService.InvokeTrigger(message, cancelToken).Forget();
                     }
+                }
+
+                var now = DateTime.Now;
+
+                if (nextGCExecute < now)
+                {
+                    nextGCExecute = now.AddSeconds(30);
+
+                    GC.Collect();
                 }
             }
             catch (Exception e)
