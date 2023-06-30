@@ -2,7 +2,6 @@
 using System;
 using System.Linq;
 using System.Net;
-using System.Net.Cache;
 using System.Net.Security;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading;
@@ -42,10 +41,6 @@ namespace ChatworkJobTrigger
             ServicePointManager.Expect100Continue = false;
             ServicePointManager.SecurityProtocol = SecurityProtocolType.Tls | SecurityProtocolType.Tls11 | SecurityProtocolType.Tls12;
             ServicePointManager.ServerCertificateValidationCallback = OnRemoteCertificateValidationCallback;
-
-            // HttpWebRequest.
-
-            HttpWebRequest.DefaultCachePolicy = new HttpRequestCachePolicy(HttpRequestCacheLevel.NoCacheNoStore);
 
             // ChatWork.
 
