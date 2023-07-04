@@ -208,13 +208,16 @@ namespace ChatworkJobTrigger
 
                 errorMessageBuilder.AppendLine(result.Error.Message);
 
+                var loopCount = 0;
                 var exception = result.Error.InnerException;
 
-                while (exception != null)
+                while (exception != null && loopCount < 15)
                 {
                     errorMessageBuilder.AppendLine($"- {exception.Message}");
 
                     exception = result.Error.InnerException;
+
+                    loopCount++;
                 }
 
                 var errorMessage = errorMessageBuilder.ToString();
