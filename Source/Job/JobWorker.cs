@@ -211,7 +211,7 @@ namespace ChatworkJobTrigger
                 var loopCount = 0;
                 var exception = result.Error.InnerException;
 
-                while (exception != null && loopCount < 15)
+                while (exception != null && loopCount < 5)
                 {
                     errorMessageBuilder.AppendLine($"- {exception.Message}");
 
