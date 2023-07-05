@@ -128,16 +128,13 @@ namespace ChatworkJobTrigger
                 {
                     build = await runner.RunAsync(jobName);
                 }
-
-                if (build != null)
-                {
-                    jobInfo.BuildNumber = build.Number;
-                }
             }
             catch (Exception e)
             {
                 jobInfo.Error = e;
             }
+
+            jobInfo.BuildNumber = runner.BuildNumber;
 
             // ビルド開始を暫く待つ.
 
@@ -146,6 +143,9 @@ namespace ChatworkJobTrigger
             // ビルド完了後の後処理を待つ.
 
             if (!jobInfo.BuildNumber.HasValue){ return jobInfo; }
+
+            // エラーをクリア.
+            jobInfo.Error = null;
 
             var buildNumberStr = jobInfo.BuildNumber.ToString();
 
@@ -178,10 +178,15 @@ namespace ChatworkJobTrigger
 
                 if (0 < retryCount)
                 {
-                    await Task.Delay(TimeSpan.FromSeconds(3f));
+                    await Task.Delay(TimeSpan.FromSeconds(15f));
                 }
 
-                if (5 < retryCount){ break; }
+                if (5 < retryCount)
+                {
+                    jobInfo.Error = new Exception("Jenkins get progress failed.");
+
+                    return jobInfo;
+                }
             }
 
             // ビルド結果.

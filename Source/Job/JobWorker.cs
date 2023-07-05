@@ -202,33 +202,13 @@ namespace ChatworkJobTrigger
                 Status = JobStatus.Unknown;
 
                 resultMessage += chatworkService.GetReplyStr(TriggerMessage);
-                resultMessage += "Jenkins job info get failed.";
-
-                var errorMessageBuilder = new StringBuilder();
-
-                errorMessageBuilder.AppendLine(result.Error.Message);
-
-                var loopCount = 0;
-                var exception = result.Error.InnerException;
-
-                while (exception != null && loopCount < 5)
-                {
-                    errorMessageBuilder.AppendLine($"- {exception.Message}");
-
-                    exception = result.Error.InnerException;
-
-                    loopCount++;
-                }
-
-                var errorMessage = errorMessageBuilder.ToString();
+                resultMessage += $"Jenkins job info get failed.\n - {result.Error} : {result.Error.Message}";
 
                 ConsoleUtility.Separator();
 
-                Console.WriteLine(errorMessage);
+                Console.WriteLine(result.Error.Message);
 
                 ConsoleUtility.Separator();
-
-                resultMessage += $"\n{errorMessage}";
 
                 await chatworkService.SendMessage(resultMessage, cancelToken);
             }
