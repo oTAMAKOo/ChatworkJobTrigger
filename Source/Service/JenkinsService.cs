@@ -183,7 +183,7 @@ namespace ChatworkJobTrigger
 
                 if (5 < retryCount)
                 {
-                    jobInfo.Error = new Exception("Jenkins get progress failed.");
+                    jobInfo.Error = new Exception($"Jenkins get progress failed. (retried {retryCount} times)");
 
                     return jobInfo;
                 }
