@@ -61,7 +61,7 @@ namespace ChatworkJobTrigger
 
             try
             {
-                var json = await client.GetMessage(cancelToken);
+                var json = await client.GetMessage(cancelToken, true);
 
                 if (!string.IsNullOrEmpty(json))
                 {
