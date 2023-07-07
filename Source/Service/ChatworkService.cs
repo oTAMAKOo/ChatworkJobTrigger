@@ -1,4 +1,5 @@
-﻿using System;
+﻿
+using System;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -18,9 +19,9 @@ namespace ChatworkJobTrigger
         
         private ChatworkClient client = null;
 
-        private DateTime fetchTime = default;
-
         private DateTime nextFetchTime = default;
+
+        private FixedQueue<ulong> receivedMessageIds = null;
 
         //----- property -----
 
@@ -38,10 +39,13 @@ namespace ChatworkJobTrigger
 
             client = new ChatworkClient(setting.ChatworkRoomId, setting.ChatworkApiKey);
 
+            nextFetchTime = DateTime.Now;
+
+            receivedMessageIds = new FixedQueue<ulong>(150);
+
             await GetMyAccountData(cancelToken);
 
-            fetchTime = DateTime.Now;
-            nextFetchTime = fetchTime;
+            await Fetch(CancellationToken.None);
         }
 
         public async Task GetMyAccountData(CancellationToken cancelToken)
@@ -65,15 +69,17 @@ namespace ChatworkJobTrigger
 
                 if (!string.IsNullOrEmpty(json))
                 {
-                    var unixTime = (long)fetchTime.ToUniversalTime().Subtract(TimeExtensions.UNIX_EPOCH).TotalSeconds;
-
                     var messages = JsonConvert.DeserializeObject<MessageData[]>(json);
             
-                    // 前回取得後以降に投稿・更新された対象にフィルタリング.
-                    result = messages.Where(x =>　unixTime <= x.send_time).ToArray();
-                }
+                    // 取得済み一覧に存在しないメッセージを新規として扱う.
+                    result = messages.Where(x => receivedMessageIds.All(y => y != x.message_id)).ToArray();
 
-                fetchTime = time;
+                    foreach (var message in messages)
+                    {
+                        receivedMessageIds.Enqueue(message.message_id);
+                    }
+                }
+                
                 nextFetchTime = time.AddSeconds(FetchIntervalSeconds);
             }
             catch (Exception e)
