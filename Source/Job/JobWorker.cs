@@ -202,7 +202,7 @@ namespace ChatworkJobTrigger
                 Status = JobStatus.Unknown;
 
                 resultMessage += chatworkService.GetReplyStr(TriggerMessage);
-                resultMessage += $"Jenkins job info get failed.\n - {result.Error} : {result.Error.Message}";
+                resultMessage += $"Jenkins job info get failed.\n - {result.Error.GetType()} : {result.Error.Message}";
 
                 ConsoleUtility.Separator();
 
