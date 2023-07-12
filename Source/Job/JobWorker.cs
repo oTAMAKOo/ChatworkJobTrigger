@@ -156,7 +156,9 @@ namespace ChatworkJobTrigger
             var chatworkService = ChatworkService.Instance;
             var jenkinsService = JenkinsService.Instance;
             
-            await BuildJobData(command, arguments, cancelToken);
+            var setup = await BuildJobData(command, arguments, cancelToken);
+
+            if (!setup){ return; }
 
             var result = await jenkinsService.ReqestBuild(JobName, JobParameters, OnJobStatusChanged);
 
@@ -214,7 +216,7 @@ namespace ChatworkJobTrigger
             }
         }
 
-        private async Task BuildJobData(Command command, string[] arguments, CancellationToken cancelToken)
+        private async Task<bool> BuildJobData(Command command, string[] arguments, CancellationToken cancelToken)
         {
             var chatworkService = ChatworkService.Instance;
 
@@ -248,7 +250,11 @@ namespace ChatworkJobTrigger
 
                     await chatworkService.SendMessage(message, cancelToken);
                 }
+                
+                return false;
             }
+
+            return true;
         }
 
         private void ValidateJobParameters(Command command, Dictionary<string, string> jobParameters)

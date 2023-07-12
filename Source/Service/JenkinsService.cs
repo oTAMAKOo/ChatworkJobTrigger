@@ -28,7 +28,7 @@ namespace ChatworkJobTrigger
         Unknown,
     }
 
-    public sealed class JobResult
+    public sealed class JobInfo
     {
         public string JobName { get; set; }
 
@@ -37,6 +37,8 @@ namespace ChatworkJobTrigger
         public JobStatus Status { get; set; }
 
         public JenkinsBuildBase ResultInfo { get; set; }
+
+        public int? QueueNumber { get; set; }
 
         public int? BuildNumber { get; set; }
 
@@ -73,11 +75,11 @@ namespace ChatworkJobTrigger
             return Task.CompletedTask;
         }
 
-        public async Task<JobResult> ReqestBuild(string jobName, IDictionary<string, string> jobParameters, Action<JobStatus, int?, int?> onJobStatusChanged)
+        public async Task<JobInfo> ReqestBuild(string jobName, IDictionary<string, string> jobParameters, Action<JobStatus, int?, int?> onJobStatusChanged)
         {
             var setting = Setting.Instance;
             
-            var jobInfo = new JobResult()
+            var jobInfo = new JobInfo()
             {
                 JobName = jobName,
                 Parameters = jobParameters,
@@ -95,6 +97,7 @@ namespace ChatworkJobTrigger
             
             runner.StatusChanged += () => 
             {
+                jobInfo.QueueNumber = runner.QueueItemNumber;
                 jobInfo.BuildNumber = runner.BuildNumber;
 
                 switch (runner.Status) 
@@ -134,64 +137,33 @@ namespace ChatworkJobTrigger
                 jobInfo.Error = e;
             }
 
-            jobInfo.BuildNumber = runner.BuildNumber;
-
-            // ビルド開始を暫く待つ.
-
             await Task.Delay(TimeSpan.FromSeconds(5f));
 
-            // ビルド完了後の後処理を待つ.
+            // キュー・ビルドが開始されていない場合はエラーにする.
 
-            if (!jobInfo.BuildNumber.HasValue){ return jobInfo; }
-
-            // エラーをクリア.
-            jobInfo.Error = null;
-
-            var buildNumberStr = jobInfo.BuildNumber.ToString();
-
-            var retryCount = 0;
-
-            while (true)
+            if (!runner.QueueItemNumber.HasValue && !runner.BuildNumber.HasValue)
             {
-                try
+                if (jobInfo.Error == null)
                 {
-                    build = await client.Builds.GetAsync<JenkinsBuildBase>(jobName, buildNumberStr);
-
-                    if (!build.Building.HasValue || !build.Building.Value) { break; }
-                
-                    await Task.Delay(TimeSpan.FromSeconds(30));
-
-                    retryCount = 0;
-                }
-                catch (TimeoutException)
-                {
-                    retryCount++;
-                }
-                catch (JenkinsJobGetBuildException)
-                {
-                    retryCount++;
-                }
-                catch (Exception ex)
-                {
-                    Console.WriteLine(ex);
+                    jobInfo.Error = new Exception("Jenkins job start failed.");
                 }
 
-                if (0 < retryCount)
-                {
-                    await Task.Delay(TimeSpan.FromSeconds(15f));
-                }
-
-                if (5 < retryCount)
-                {
-                    jobInfo.Error = new Exception($"Jenkins get progress failed. (retried {retryCount} times)");
-
-                    return jobInfo;
-                }
+                return jobInfo;
             }
 
+            // キュー状況を取得.
+
+            jobInfo = await RetrieveQueueProcess(jobInfo);
+
+            if (jobInfo.Error != null) { return jobInfo; }
+
+            // ビルド状況を取得.
+
+            jobInfo = await RetrieveBuildProcess(jobInfo);
+
+            if (jobInfo.Error != null) { return jobInfo; }
+
             // ビルド結果.
-             
-            jobInfo.ResultInfo = build;
 
             switch (build.Result)
             {
@@ -212,6 +184,109 @@ namespace ChatworkJobTrigger
             if (onJobStatusChanged != null)
             {
                 onJobStatusChanged.Invoke(jobInfo.Status, null, jobInfo.BuildNumber);
+            }
+
+            return jobInfo;
+        }
+
+        private async Task<JobInfo> RetrieveQueueProcess(JobInfo jobInfo)
+        {
+            var retryCount = 0;
+
+            jobInfo.Error = null;
+
+            while (true)
+            {
+                try
+                {
+                    if (jobInfo.BuildNumber.HasValue){ break; }
+
+                    if (!jobInfo.QueueNumber.HasValue) { break; }
+
+                    var queue = await client.Queue.GetItemAsync(jobInfo.QueueNumber.Value);
+
+                    if (queue.Cancelled == true) { break; }
+
+                    await Task.Delay(TimeSpan.FromSeconds(30));
+
+                    retryCount = 0;
+                }
+                catch
+                {
+                    retryCount++;
+                }
+
+                if (0 < retryCount)
+                {
+                    await Task.Delay(TimeSpan.FromSeconds(30f));
+                }
+
+                if (5 <= retryCount)
+                {
+                    jobInfo.Error = new Exception("Jenkins get queue progress failed.");
+
+                    break;
+                }
+            }
+
+            jobInfo.QueueNumber = null;
+
+            return jobInfo;
+        }
+
+        private async Task<JobInfo> RetrieveBuildProcess(JobInfo jobInfo)
+        {
+            if (!jobInfo.BuildNumber.HasValue)
+            {
+                if (jobInfo.Error == null)
+                {
+                    jobInfo.Error = new Exception("RetrieveBuildProcess : BuildNumber not found.");
+                }
+
+                return jobInfo;
+            }
+
+            JenkinsBuildBase build = null;
+
+            var buildNumberStr = jobInfo.BuildNumber.ToString();
+
+            var retryCount = 0;
+
+            jobInfo.Error = null;
+
+            while (true)
+            {
+                try
+                {
+                    build = await client.Builds.GetAsync<JenkinsBuildBase>(jobInfo.JobName, buildNumberStr);
+
+                    if (!build.Building.HasValue || !build.Building.Value) { break; }
+                
+                    await Task.Delay(TimeSpan.FromSeconds(30));
+
+                    retryCount = 0;
+                }
+                catch
+                {
+                    retryCount++;
+                }
+
+                if (0 < retryCount)
+                {
+                    await Task.Delay(TimeSpan.FromSeconds(30f));
+                }
+
+                if (5 <= retryCount)
+                {
+                    jobInfo.Error = new Exception("Jenkins get build progress failed.");
+
+                    break;
+                }
+            }
+
+            if (jobInfo.Error == null)
+            {
+                jobInfo.ResultInfo = build;
             }
 
             return jobInfo;
