@@ -202,6 +202,8 @@ namespace ChatworkJobTrigger
 
             jobInfo.Error = null;
 
+            var errorMessage = "Jenkins get queue progress failed.";
+
             while (true)
             {
                 try
@@ -211,6 +213,11 @@ namespace ChatworkJobTrigger
                     if (!jobInfo.QueueNumber.HasValue) { break; }
 
                     var queue = await client.Queue.GetItemAsync(jobInfo.QueueNumber.Value);
+
+                    if (queue == null)
+                    {
+                        throw new Exception(errorMessage);
+                    }
 
                     if (queue.Cancelled == true) { break; }
 
@@ -228,9 +235,9 @@ namespace ChatworkJobTrigger
                     await Task.Delay(TimeSpan.FromSeconds(30f));
                 }
 
-                if (5 <= retryCount)
+                if (10 <= retryCount)
                 {
-                    jobInfo.Error = new Exception("Jenkins get queue progress failed.");
+                    jobInfo.Error = new Exception(errorMessage);
 
                     break;
                 }
@@ -259,6 +266,8 @@ namespace ChatworkJobTrigger
 
             var retryCount = 0;
 
+            var errorMessage = "Jenkins get build progress failed.";
+
             jobInfo.Error = null;
 
             while (true)
@@ -266,6 +275,11 @@ namespace ChatworkJobTrigger
                 try
                 {
                     build = await client.Builds.GetAsync<JenkinsBuildBase>(jobInfo.JobName, buildNumberStr);
+
+                    if (build == null)
+                    {
+                        throw new Exception(errorMessage);
+                    }
 
                     if (!build.Building.HasValue || !build.Building.Value) { break; }
                 
@@ -283,9 +297,9 @@ namespace ChatworkJobTrigger
                     await Task.Delay(TimeSpan.FromSeconds(30f));
                 }
 
-                if (5 <= retryCount)
+                if (10 <= retryCount)
                 {
-                    jobInfo.Error = new Exception("Jenkins get build progress failed.");
+                    jobInfo.Error = new Exception(errorMessage);
 
                     break;
                 }
