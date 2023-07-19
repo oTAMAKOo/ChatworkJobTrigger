@@ -165,20 +165,27 @@ namespace ChatworkJobTrigger
 
             // ビルド結果.
 
-            switch (build.Result)
+            if (build != null)
             {
-                case "SUCCESS":
-                    jobInfo.Status = JobStatus.Success;
-                    break;
-                case "FAILURE":
-                    jobInfo.Status = JobStatus.Failed;
-                    break;
-                case "ABORTED":
-                    jobInfo.Status = JobStatus.Canceled;
-                    break;
-                default:
-                    jobInfo.Status = JobStatus.Unknown;
-                    break;
+                switch (build.Result)
+                {
+                    case "SUCCESS":
+                        jobInfo.Status = JobStatus.Success;
+                        break;
+                    case "FAILURE":
+                        jobInfo.Status = JobStatus.Failed;
+                        break;
+                    case "ABORTED":
+                        jobInfo.Status = JobStatus.Canceled;
+                        break;
+                    default:
+                        jobInfo.Status = JobStatus.Unknown;
+                        break;
+                }
+            }
+            else
+            {
+                jobInfo.Status = JobStatus.Unknown;
             }
             
             if (onJobStatusChanged != null)
