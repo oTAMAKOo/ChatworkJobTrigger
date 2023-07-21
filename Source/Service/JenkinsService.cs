@@ -36,7 +36,7 @@ namespace ChatworkJobTrigger
 
         public JobStatus Status { get; set; }
 
-        public JenkinsBuildBase ResultInfo { get; set; }
+        public JenkinsBuildBase Build { get; set; }
 
         public int? QueueNumber { get; set; }
 
@@ -119,17 +119,15 @@ namespace ChatworkJobTrigger
                 }
             };
 
-            JenkinsBuildBase build = null;
-            
             try
             {
                 if(jobParameters != null && jobParameters.Any())
                 {
-                    build = await runner.RunWithParametersAsync(jobName, jobParameters);
+                    jobInfo.Build = await runner.RunWithParametersAsync(jobName, jobParameters);
                 }
                 else
                 {
-                    build = await runner.RunAsync(jobName);
+                    jobInfo.Build = await runner.RunAsync(jobName);
                 }
             }
             catch (Exception e)
@@ -165,11 +163,13 @@ namespace ChatworkJobTrigger
 
             if (jobInfo.Error != null) { return jobInfo; }
 
+            await Task.Delay(TimeSpan.FromSeconds(15));
+
             // ビルド結果.
 
-            if (build != null)
+            if (jobInfo.Build != null)
             {
-                switch (build.Result)
+                switch (jobInfo.Build.Result)
                 {
                     case "SUCCESS":
                         jobInfo.Status = JobStatus.Success;
@@ -187,7 +187,9 @@ namespace ChatworkJobTrigger
             }
             else
             {
-                jobInfo.Status = JobStatus.Unknown;
+                jobInfo.Error = new Exception("Build result jobInfo.Build is null.");
+                
+                return jobInfo;
             }
             
             if (onJobStatusChanged != null)
@@ -262,8 +264,6 @@ namespace ChatworkJobTrigger
                 return jobInfo;
             }
 
-            JenkinsBuildBase build = null;
-
             var buildNumberStr = jobInfo.BuildNumber.ToString();
 
             var retryCount = 0;
@@ -276,14 +276,14 @@ namespace ChatworkJobTrigger
             {
                 try
                 {
-                    build = await client.Builds.GetAsync<JenkinsBuildBase>(jobInfo.JobName, buildNumberStr);
+                    jobInfo.Build = await client.Builds.GetAsync<JenkinsBuildBase>(jobInfo.JobName, buildNumberStr);
 
-                    if (build == null)
+                    if (jobInfo.Build != null)
                     {
                         throw new Exception(errorMessage);
                     }
 
-                    if (!build.Building.HasValue || !build.Building.Value) { break; }
+                    if (!jobInfo.Build.Building.HasValue || !jobInfo.Build.Building.Value) { break; }
                 
                     await Task.Delay(TimeSpan.FromSeconds(30));
 
@@ -305,11 +305,6 @@ namespace ChatworkJobTrigger
 
                     break;
                 }
-            }
-
-            if (jobInfo.Error == null)
-            {
-                jobInfo.ResultInfo = build;
             }
 
             return jobInfo;
