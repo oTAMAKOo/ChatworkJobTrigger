@@ -225,7 +225,7 @@ namespace ChatworkJobTrigger
 
                     if (queue.Cancelled == true) { break; }
 
-                    await Task.Delay(TimeSpan.FromSeconds(30));
+                    await Task.Delay(TimeSpan.FromSeconds(15));
 
                     retryCount = 0;
                 }
@@ -285,7 +285,7 @@ namespace ChatworkJobTrigger
 
                     if (!jobInfo.Build.Building.HasValue || !jobInfo.Build.Building.Value) { break; }
                 
-                    await Task.Delay(TimeSpan.FromSeconds(30));
+                    await Task.Delay(TimeSpan.FromSeconds(15));
 
                     retryCount = 0;
                 }
