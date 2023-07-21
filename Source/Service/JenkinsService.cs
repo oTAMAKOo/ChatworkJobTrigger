@@ -157,6 +157,8 @@ namespace ChatworkJobTrigger
 
             if (jobInfo.Error != null) { return jobInfo; }
 
+            await Task.Delay(TimeSpan.FromSeconds(15));
+
             // ビルド状況を取得.
 
             jobInfo = await RetrieveBuildProcess(jobInfo);
