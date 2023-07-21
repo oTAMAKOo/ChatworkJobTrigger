@@ -278,7 +278,7 @@ namespace ChatworkJobTrigger
                 {
                     jobInfo.Build = await client.Builds.GetAsync<JenkinsBuildBase>(jobInfo.JobName, buildNumberStr);
 
-                    if (jobInfo.Build != null)
+                    if (jobInfo.Build == null)
                     {
                         throw new Exception(errorMessage);
                     }
