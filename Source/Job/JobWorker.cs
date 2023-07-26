@@ -3,8 +3,6 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Linq.Expressions;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Extensions;
@@ -67,7 +65,9 @@ namespace ChatworkJobTrigger
 
                 if (TriggerMessage != null)
                 {
-                    var message = chatworkService.GetReplyStr(TriggerMessage) + ex;
+                    var replyStr = chatworkService.GetReplyStr(TriggerMessage);
+
+                    var message = $"{replyStr}{ex}";
 
                     await chatworkService.SendMessage(message, cancelToken);
                 }
@@ -203,8 +203,16 @@ namespace ChatworkJobTrigger
             {
                 Status = JobStatus.Unknown;
 
+                var exceptionErrorText = TextDefine.Instance.JobExceptionError;
+
                 resultMessage += chatworkService.GetReplyStr(TriggerMessage);
-                resultMessage += $"Jenkins job info get failed.\n - {result.Error.GetType()} : {result.Error.Message}";
+                
+                if (!string.IsNullOrEmpty(exceptionErrorText))
+                {
+                    resultMessage += exceptionErrorText;
+                }
+
+                resultMessage += $"\n - {result.Error.GetType()} : {result.Error.Message}";
 
                 ConsoleUtility.Separator();
 

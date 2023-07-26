@@ -4,10 +4,10 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Net.Http;
 using System.Net.Http.Headers;
+using System.Net.NetworkInformation;
 using System.Text;
 using System.Threading.Tasks;
 using JenkinsNET;
-using JenkinsNET.Exceptions;
 using JenkinsNET.Models;
 using JenkinsNET.Utilities;
 using Extensions;
@@ -216,6 +216,8 @@ namespace ChatworkJobTrigger
 
                     if (!jobInfo.QueueNumber.HasValue) { break; }
 
+                    await WaitNetworkConnection();
+
                     var queue = await client.Queue.GetItemAsync(jobInfo.QueueNumber.Value);
 
                     if (queue == null)
@@ -236,10 +238,10 @@ namespace ChatworkJobTrigger
 
                 if (0 < retryCount)
                 {
-                    await Task.Delay(TimeSpan.FromSeconds(30f));
+                    await Task.Delay(TimeSpan.FromSeconds(5f));
                 }
 
-                if (10 <= retryCount)
+                if (15 <= retryCount)
                 {
                     jobInfo.Error = new Exception(errorMessage);
 
@@ -276,6 +278,8 @@ namespace ChatworkJobTrigger
             {
                 try
                 {
+                    await WaitNetworkConnection();
+
                     jobInfo.Build = await client.Builds.GetAsync<JenkinsBuildBase>(jobInfo.JobName, buildNumberStr);
 
                     if (jobInfo.Build == null)
@@ -296,10 +300,10 @@ namespace ChatworkJobTrigger
 
                 if (0 < retryCount)
                 {
-                    await Task.Delay(TimeSpan.FromSeconds(30f));
+                    await Task.Delay(TimeSpan.FromSeconds(5f));
                 }
 
-                if (10 <= retryCount)
+                if (15 <= retryCount)
                 {
                     jobInfo.Error = new Exception(errorMessage);
 
@@ -406,6 +410,16 @@ namespace ChatworkJobTrigger
             var logFilePath = setting.JenkinsLogFilePath;
 
             return logFilePath.Replace("#JOB_NAME#", jobName).Replace("#BUILD_NUMBER#", buildNumber.ToString());
+        }
+
+        private async Task WaitNetworkConnection()
+        {
+            while (true)
+            {
+                if (NetworkInterface.GetIsNetworkAvailable()){ break; }
+                
+                await Task.Delay(TimeSpan.FromSeconds(5f));
+            }
         }
     }
 }

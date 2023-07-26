@@ -20,6 +20,7 @@ namespace ChatworkJobTrigger
         private const string ArgumentNotFoundErrorField = "ArgumentNotFound";
         private const string UndefinedValueErrorField = "UndefinedValue";
         private const string UndefinedTypeErrorField = "UndefinedType";
+        private const string JobThrowExceptionField = "JobThrowException";
         
         //----- field -----
         
@@ -36,6 +37,7 @@ namespace ChatworkJobTrigger
         public string ArgumentNotFoundError { get { return GetData<string>(ErrorSection, ArgumentNotFoundErrorField); } }
         public string UndefinedValueError { get { return GetData<string>(ErrorSection, UndefinedValueErrorField); } }
         public string UndefinedTypeError { get { return GetData<string>(ErrorSection, UndefinedTypeErrorField); } }
+        public string JobExceptionError { get { return GetData<string>(ErrorSection, JobThrowExceptionField); } }
 
         //----- method -----
 
