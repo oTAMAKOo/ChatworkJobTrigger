@@ -241,7 +241,7 @@ namespace ChatworkJobTrigger
                     await Task.Delay(TimeSpan.FromSeconds(5f));
                 }
 
-                if (15 <= retryCount)
+                if (30 <= retryCount)
                 {
                     jobInfo.Error = new Exception(errorMessage);
 
@@ -303,7 +303,7 @@ namespace ChatworkJobTrigger
                     await Task.Delay(TimeSpan.FromSeconds(5f));
                 }
 
-                if (15 <= retryCount)
+                if (30 <= retryCount)
                 {
                     jobInfo.Error = new Exception(errorMessage);
 
