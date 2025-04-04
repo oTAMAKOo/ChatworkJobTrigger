@@ -109,18 +109,21 @@ namespace ChatworkJobTrigger
 
         public async Task<string> SendMessage(string message, CancellationToken cancelToken, bool selfUnRead = false)
         {
-            var body = $"?body={ Uri.EscapeDataString(message)}&self_unread={(selfUnRead ? 1 : 0)}";
-
             Func<HttpRequestMessage> requestGenerator = () => new HttpRequestMessage
             {
                 Method = HttpMethod.Post,
-                RequestUri = GetRequestUri("messages" + body),
+                RequestUri = GetRequestUri("messages"),
                 Headers =
                 {
                     { "Accept", "application/json" },
                     { "X-ChatWorkToken", ApiToken },
                 },
-            };
+                Content = new FormUrlEncodedContent(new Dictionary<string, string>
+                {
+                    { "self_unread", selfUnRead ? "0" : "1" },
+                    { "body", message },
+                    }),
+                };
 
             var result = await SendAsync(requestGenerator, cancelToken);
 
